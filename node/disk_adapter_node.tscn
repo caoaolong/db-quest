@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://q760spg7t3qb"]
+
+[ext_resource type="PackedScene" uid="uid://diupwx6dksdpq" path="res://node/node_action_bar.tscn" id="1_n2fc2"]
+
+[node name="DiskAdapterNode" type="VBoxContainer" unique_id=1225143929]
+custom_minimum_size = Vector2(160, 0)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=449411890]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer" unique_id=1832911806]
+layout_mode = 2
+
+[node name="NodeActionBar" parent="VBoxContainer" unique_id=1300589146 instance=ExtResource("1_n2fc2")]
+layout_mode = 2

@@ -1,0 +1,48 @@
+[gd_scene format=3 uid="uid://b0kmtt1xqmp6c"]
+
+[ext_resource type="Script" uid="uid://dh1aaptej2soq" path="res://graph_edit.gd" id="1_wlowb"]
+[ext_resource type="StyleBox" uid="uid://bhn0kgpjel2s0" path="res://button_bar.tres" id="3_wrb8p"]
+[ext_resource type="Script" uid="uid://d2jni5ucghw8o" path="res://button_bar.gd" id="4_button_bar"]
+
+[node name="Control" type="Control" unique_id=1066378090]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1233018264]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TabBar" type="TabBar" parent="VBoxContainer" unique_id=1123439592]
+layout_mode = 2
+current_tab = 0
+tab_count = 2
+tab_0/title = "Common"
+tab_1/title = "Disk"
+
+[node name="ButtonBar" type="PanelContainer" parent="VBoxContainer" unique_id=1351552218]
+layout_mode = 2
+theme_override_styles/panel = ExtResource("3_wrb8p")
+script = ExtResource("4_button_bar")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/ButtonBar" unique_id=1587139510]
+layout_mode = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ButtonBar/MarginContainer" unique_id=633267548]
+layout_mode = 2
+
+[node name="GraphEdit" type="GraphEdit" parent="VBoxContainer" unique_id=955933790]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("1_wlowb")

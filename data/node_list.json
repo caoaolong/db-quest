@@ -1,0 +1,66 @@
+[
+    {
+        "name": "DiskNode",
+        "type": "Disk",
+        "label": "Disk",
+        "scene": "res://node/disk_node.tscn",
+        "attributes": {
+            "title": "磁盘",
+            "subtitle": "当前用量",
+            "slots": [
+                {
+                    "row_number": 1.0,
+                    "row_name": "Control Bus",
+                    "operation": "OPERATION_CODE",
+                    "op_type": "INPUT"
+                },
+                {
+                    "row_number": 2.0,
+                    "row_name": "Data Bus",
+                    "operation": "INT64",
+                    "op_type": "INPUT|OUTPUT"
+                },
+                {
+                    "row_number": 3.0,
+                    "row_name": "Address Bus",
+                    "operation": "INT64",
+                    "op_type": "INPUT"
+                }
+            ]
+        }
+    },
+    {
+        "name": "DiskReadAdapterNode",
+        "type": "Disk",
+        "label": "Disk Read Adapter",
+        "scene": "res://node/disk_adapter_node.tscn",
+        "attributes": {
+            "title": "磁盘适配器",
+            "subtitle": "读取磁盘",
+            "slots": [
+                {
+                    "row_number": 1.0,
+                    "row_options": [
+                        "READ",
+                        "WRITE",
+                        "CHECK"
+                    ],
+                    "operation": "OPERATION_CODE",
+                    "op_type": "OUTPUT"
+                },
+                {
+                    "row_number": 2.0,
+                    "row_number_input": "Data Bus",
+                    "operation": "INT64",
+                    "op_type": "INPUT|OUTPUT"
+                },
+                {
+                    "row_number": 3.0,
+                    "row_number_input": "Address Bus",
+                    "operation": "INT64",
+                    "op_type": "INPUT|OUTPUT"
+                }
+            ]
+        }
+    }
+]

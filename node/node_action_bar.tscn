@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://diupwx6dksdpq"]
+
+[node name="NodeActionBar" type="HBoxContainer" unique_id=1300589146]
+
+[node name="Delete" type="Button" parent="." unique_id=1952599860]
+layout_mode = 2
+text = "Delete"
