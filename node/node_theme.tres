@@ -1,3 +1,6 @@
-[gd_resource type="Theme" format=3 uid="uid://b7t3vg71ve5od"]
+[gd_resource type="Theme" load_steps=2 format=3 uid="uid://b7t3vg71ve5od"]
+
+[ext_resource type="FontFile" path="res://fonts/cjk.ttf" id="1_cjk"]
 
 [resource]
+default_font = ExtResource("1_cjk")

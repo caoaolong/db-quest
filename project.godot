@@ -18,3 +18,12 @@ config/name="DBQuest"
 run/main_scene="uid://b0kmtt1xqmp6c"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
+
+[display]
+
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[gui]
+
+theme/custom="res://node/node_theme.tres"

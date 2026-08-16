@@ -12,19 +12,38 @@
                     "row_number": 1.0,
                     "row_name": "Control Bus",
                     "operation": "OPERATION_CODE",
-                    "op_type": "INPUT"
+                    "op_list": [
+                        {
+                            "operation": "OPERATION_CODE",
+                            "type": "INPUT"
+                        }
+                    ]
                 },
                 {
                     "row_number": 2.0,
                     "row_name": "Data Bus",
                     "operation": "INT64",
-                    "op_type": "INPUT|OUTPUT"
+                    "op_list": [
+                        {
+                            "operation": "INT64",
+                            "type": "INPUT"
+                        },
+                        {
+                            "operation": "INT64",
+                            "type": "OUTPUT"
+                        }
+                    ]
                 },
                 {
                     "row_number": 3.0,
                     "row_name": "Address Bus",
                     "operation": "INT64",
-                    "op_type": "INPUT"
+                    "op_list": [
+                        {
+                            "operation": "INT64",
+                            "type": "INPUT"
+                        }
+                    ]
                 }
             ]
         }
@@ -46,19 +65,63 @@
                         "CHECK"
                     ],
                     "operation": "OPERATION_CODE",
-                    "op_type": "OUTPUT"
+                    "op_list": [
+                        {
+                            "operation": "OPERATION_CODE",
+                            "type": "OUTPUT"
+                        }
+                    ]
                 },
                 {
                     "row_number": 2.0,
-                    "row_number_input": "Data Bus",
-                    "operation": "INT64",
-                    "op_type": "INPUT|OUTPUT"
+                    "row_number_input": "Data",
+                    "op_list": [
+                        {
+                            "operation": "DATA",
+                            "type": "INPUT"
+                        },
+                        {
+                            "operation": "INT64",
+                            "type": "OUTPUT"
+                        }
+                    ]
                 },
                 {
                     "row_number": 3.0,
-                    "row_number_input": "Address Bus",
-                    "operation": "INT64",
-                    "op_type": "INPUT|OUTPUT"
+                    "row_number_input": "Address",
+                    "op_list": [
+                        {
+                            "operation": "INT64",
+                            "type": "INPUT"
+                        },
+                        {
+                            "operation": "INT64",
+                            "type": "OUTPUT"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "name": "DataNode",
+        "type": "Common",
+        "label": "Data Node",
+        "scene": "res://node/data_node.tscn",
+        "attributes": {
+            "title": "数据节点",
+            "subtitle": "512 Bytes",
+            "slots": [
+                {
+                    "row_number": 1.0,
+                    "row_name": "Data",
+                    "operation": "DATA",
+                    "op_list": [
+                        {
+                            "operation": "DATA",
+                            "type": "OUTPUT"
+                        }
+                    ]
                 }
             ]
         }
