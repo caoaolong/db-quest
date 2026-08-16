@@ -1,0 +1,39 @@
+[gd_scene format=3 uid="uid://u633aotie483"]
+
+[ext_resource type="Script" uid="uid://m8yrllbjjfs2" path="res://dialog/display_dialog.gd" id="1_b5yy2"]
+
+[node name="DisplayDialog" type="PopupPanel" unique_id=406800570]
+oversampling_override = 1.0
+initial_position = 1
+size = Vector2i(600, 400)
+visible = true
+script = ExtResource("1_b5yy2")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=733165351]
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 596.0
+offset_bottom = 396.0
+
+[node name="TextEdit" type="TextEdit" parent="VBoxContainer" unique_id=1512348271]
+layout_mode = 2
+size_flags_vertical = 3
+editable = false
+wrap_mode = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1041431079]
+layout_mode = 2
+alignment = 2
+
+[node name="Size" type="Label" parent="VBoxContainer/HBoxContainer" unique_id=992073383]
+layout_mode = 2
+
+[node name="Control" type="Control" parent="VBoxContainer/HBoxContainer" unique_id=1809128692]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Close" type="Button" parent="VBoxContainer/HBoxContainer" unique_id=1197839437]
+layout_mode = 2
+text = "Close"
+
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/Close" to="." method="_on_close_pressed"]

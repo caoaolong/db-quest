@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://dh1aaptej2soq" path="res://graph_edit.gd" id="1_wlowb"]
 [ext_resource type="StyleBox" uid="uid://bhn0kgpjel2s0" path="res://button_bar.tres" id="3_wrb8p"]
 [ext_resource type="Script" uid="uid://d2jni5ucghw8o" path="res://button_bar.gd" id="4_button_bar"]
+[ext_resource type="PackedScene" uid="uid://u633aotie483" path="res://dialog/display_dialog.tscn" id="4_q0a35"]
 
 [node name="Control" type="Control" unique_id=1066378090]
 layout_mode = 3
@@ -23,9 +24,10 @@ grow_vertical = 2
 [node name="TabBar" type="TabBar" parent="VBoxContainer" unique_id=1123439592]
 layout_mode = 2
 current_tab = 0
-tab_count = 2
+tab_count = 3
 tab_0/title = "Common"
 tab_1/title = "Disk"
+tab_2/title = "Data"
 
 [node name="ButtonBar" type="PanelContainer" parent="VBoxContainer" unique_id=1351552218]
 layout_mode = 2
@@ -46,3 +48,6 @@ layout_mode = 2
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("1_wlowb")
+
+[node name="DisplayDialog" parent="." unique_id=406800570 instance=ExtResource("4_q0a35")]
+visible = false

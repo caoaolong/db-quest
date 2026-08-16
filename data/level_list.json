@@ -1,0 +1,19 @@
+[
+    {
+        "level": 1,
+        "name": "认识磁盘",
+        "nodes": [
+            "DiskNode",
+            "DiskAdapterNode"
+        ]
+    },
+    {
+        "level": 2,
+        "name": "读写小数据",
+        "nodes": [
+            "DiskNode",
+            "DataNode",
+            "DiskAdapterNode"
+        ]
+    }
+]

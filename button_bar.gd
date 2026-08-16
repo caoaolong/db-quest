@@ -28,6 +28,9 @@ func _build_buttons() -> void:
         if str(item.get("type", "")) != current_type:
             continue
 
+        if not GameState.is_node_available(str(item.get("name", ""))):
+            continue
+
         var button := Button.new()
         button.text = str(item.get("label", ""))
         button.custom_minimum_size = Vector2(30, 30)
