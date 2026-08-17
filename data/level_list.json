@@ -3,17 +3,18 @@
         "level": 1,
         "name": "认识磁盘",
         "nodes": [
-            "DiskNode",
-            "DiskAdapterNode"
+            "SATA_HDD",
+            "DiskAdapter"
         ]
     },
     {
         "level": 2,
-        "name": "读写小数据",
-        "nodes": [
-            "DiskNode",
-            "DataNode",
-            "DiskAdapterNode"
-        ]
+        "name": "磁盘分区",
+        "nodes": []
+    },
+    {
+        "level": 2,
+        "name": "磁盘分区",
+        "nodes": []
     }
 ]

@@ -25,7 +25,7 @@ func _build_buttons() -> void:
         if not item is Dictionary:
             continue
 
-        if str(item.get("type", "")) != current_type:
+        if GameState.get_node_tab(str(item.get("type", ""))) != current_type:
             continue
 
         if not GameState.is_node_available(str(item.get("name", ""))):

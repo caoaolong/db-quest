@@ -40,12 +40,16 @@ func _on_disconnection_request(from_node: StringName, from_port: int, to_node: S
 
 
 func create_node_from_config(item: Dictionary) -> void:
-    var node_name := str(item.get("name", ""))
+    var config := GameState.resolve_node_config(item)
+    if config.is_empty():
+        return
+
+    var node_name := str(config.get("name", ""))
     if not GameState.is_node_available(node_name):
         push_warning("Node is not available in current level: %s" % node_name)
         return
 
-    var scene_path := str(item.get("scene", ""))
+    var scene_path := str(config.get("scene", ""))
     if scene_path.is_empty():
         push_error("Node config missing scene path")
         return
@@ -55,9 +59,9 @@ func create_node_from_config(item: Dictionary) -> void:
         push_error("Failed to load scene: %s" % scene_path)
         return
 
-    var attributes := item.get("attributes", {}) as Dictionary
+    var attributes := config.get("attributes", {}) as Dictionary
     var node := GraphNode.new()
-    node.name = str(item.get("name", "GraphNode"))
+    node.name = str(config.get("name", "GraphNode"))
     node.add_theme_stylebox_override("panel", node_style)
 
     var content := scene.instantiate() as Control
@@ -76,11 +80,11 @@ func create_node_from_config(item: Dictionary) -> void:
         if attributes.has("title"):
             node.title = str(attributes["title"])
         else:
-            node.title = str(item.get("label", node.name))
+            node.title = str(config.get("label", node.name))
     elif attributes.has("title"):
         node.title = str(attributes["title"])
     else:
-        node.title = str(item.get("label", node.name))
+        node.title = str(config.get("label", node.name))
     content.set_anchors_preset(Control.PRESET_FULL_RECT)
     content.offset_left = 0
     content.offset_top = 0

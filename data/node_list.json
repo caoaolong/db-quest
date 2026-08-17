@@ -1,129 +1,22 @@
 [
     {
-        "name": "DiskNode",
+        "name": "SATA_HDD",
         "type": "Disk",
-        "label": "Disk",
-        "scene": "res://node/disk_node.tscn",
-        "attributes": {
-            "title": "磁盘",
-            "subtitle": "当前用量",
-            "slots": [
-                {
-                    "row_number": 1.0,
-                    "row_name": "Control Bus",
-                    "operation": "OPERATION_CODE",
-                    "op_list": [
-                        {
-                            "operation": "OPERATION_CODE",
-                            "type": "INPUT"
-                        }
-                    ]
-                },
-                {
-                    "row_number": 2.0,
-                    "row_name": "Data Bus",
-                    "operation": "INT64",
-                    "op_list": [
-                        {
-                            "operation": "INT64",
-                            "type": "INPUT"
-                        },
-                        {
-                            "operation": "INT64",
-                            "type": "OUTPUT"
-                        }
-                    ]
-                },
-                {
-                    "row_number": 3.0,
-                    "row_name": "Address Bus",
-                    "operation": "INT64",
-                    "op_list": [
-                        {
-                            "operation": "INT64",
-                            "type": "INPUT"
-                        }
-                    ]
-                }
-            ]
-        }
+        "label": "SATA HDD"
     },
     {
-        "name": "DiskAdapterNode",
+        "name": "NVMe_SDD",
         "type": "Disk",
-        "label": "Disk Adapter",
-        "scene": "res://node/disk_adapter_node.tscn",
-        "attributes": {
-            "title": "磁盘适配器",
-            "subtitle": "...",
-            "slots": [
-                {
-                    "row_number": 1.0,
-                    "row_options": [
-                        "READ",
-                        "WRITE",
-                        "CHECK"
-                    ],
-                    "operation": "OPERATION_CODE",
-                    "op_list": [
-                        {
-                            "operation": "OPERATION_CODE",
-                            "type": "OUTPUT"
-                        }
-                    ]
-                },
-                {
-                    "row_number": 2.0,
-                    "row_number_input": "Data",
-                    "op_list": [
-                        {
-                            "operation": "DATA",
-                            "type": "INPUT"
-                        },
-                        {
-                            "operation": "INT64",
-                            "type": "OUTPUT"
-                        }
-                    ]
-                },
-                {
-                    "row_number": 3.0,
-                    "row_number_input": "Address",
-                    "op_list": [
-                        {
-                            "operation": "INT64",
-                            "type": "INPUT"
-                        },
-                        {
-                            "operation": "INT64",
-                            "type": "OUTPUT"
-                        }
-                    ]
-                }
-            ]
-        }
+        "label": "NVMe SDD"
     },
     {
-        "name": "DataNode",
+        "name": "DiskAdapter",
+        "type": "DiskAdapter",
+        "label": "Disk Adapter"
+    },
+    {
+        "name": "LoadData",
         "type": "Data",
-        "label": "Data Node",
-        "scene": "res://node/data_node.tscn",
-        "attributes": {
-            "title": "数据节点",
-            "subtitle": "512 Bytes",
-            "slots": [
-                {
-                    "row_number": 1.0,
-                    "row_name": "Data",
-                    "operation": "DATA",
-                    "op_list": [
-                        {
-                            "operation": "DATA",
-                            "type": "OUTPUT"
-                        }
-                    ]
-                }
-            ]
-        }
+        "label": "Load Data"
     }
 ]
