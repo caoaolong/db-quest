@@ -116,5 +116,25 @@
                 }
             ]
         }
+    },
+    "Number": {
+        "scene": "res://node/number_node.tscn",
+        "attributes": {
+            "title": "数字节点",
+            "subtitle": "当前选择",
+            "slots": [
+                {
+                    "row_number": 1.0,
+                    "row_number_input": "Number",
+                    "operation": "INT64",
+                    "op_list": [
+                        {
+                            "operation": "INT64",
+                            "type": "OUTPUT"
+                        }
+                    ]
+                }
+            ]
+        }
     }
 }

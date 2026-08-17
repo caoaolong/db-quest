@@ -7,15 +7,27 @@ enum SlotType {
 
 enum Slot {
     OPERATION_CODE,
+    INT8,
+    INT16,
     INT32,
     INT64,
+    UINT8,
+    UINT16,
+    UINT32,
+    UINT64,
     DATA,
 }
 
 const SLOT_COLORS: Dictionary = {
     Slot.OPERATION_CODE: "#F59E0B",
+    Slot.INT8: "#F97316",
+    Slot.INT16: "#14B8A6",
     Slot.INT32: "#10B981",
     Slot.INT64: "#3B82F6",
+    Slot.UINT8: "#FB7185",
+    Slot.UINT16: "#2DD4BF",
+    Slot.UINT32: "#34D399",
+    Slot.UINT64: "#60A5FA",
     Slot.DATA: "#A855F7",
 }
 
@@ -32,6 +44,14 @@ func _ready() -> void:
 func _on_connection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
     if from_node == to_node:
         return
+
+    var from_graph_node := get_node_or_null(NodePath(from_node)) as GraphNode
+    var to_graph_node := get_node_or_null(NodePath(to_node)) as GraphNode
+    if from_graph_node == null or to_graph_node == null:
+        return
+    if from_graph_node.get_output_port_type(from_port) != to_graph_node.get_input_port_type(to_port):
+        return
+
     connect_node(from_node, from_port, to_node, to_port)
 
 
@@ -65,26 +85,7 @@ func create_node_from_config(item: Dictionary) -> void:
     node.add_theme_stylebox_override("panel", node_style)
 
     var content := scene.instantiate() as Control
-    if content is DiskNode:
-        var disk_node := content as DiskNode
-        if attributes.has("title"):
-            disk_node.title = str(attributes["title"])
-        if attributes.has("subtitle"):
-            disk_node.subtitle = str(attributes["subtitle"])
-        node.title = disk_node.title
-    elif content is DataNode:
-        var data_node := content as DataNode
-        if attributes.has("subtitle"):
-            data_node.subtitle = str(attributes["subtitle"])
-        data_node.data = _load_runtime_data()
-        if attributes.has("title"):
-            node.title = str(attributes["title"])
-        else:
-            node.title = str(config.get("label", node.name))
-    elif attributes.has("title"):
-        node.title = str(attributes["title"])
-    else:
-        node.title = str(config.get("label", node.name))
+    _apply_node_attributes(content, attributes, config, node)
     content.set_anchors_preset(Control.PRESET_FULL_RECT)
     content.offset_left = 0
     content.offset_top = 0
@@ -114,6 +115,39 @@ func _load_runtime_data() -> String:
         return ""
 
     return file.get_as_text()
+
+
+func _apply_node_attributes(content: Control, attributes: Dictionary, config: Dictionary, graph_node: GraphNode) -> void:
+    if attributes.has("subtitle"):
+        _set_subtitle(content, str(attributes["subtitle"]))
+
+    if content is DiskNode:
+        var disk_node := content as DiskNode
+        if attributes.has("title"):
+            disk_node.title = str(attributes["title"])
+        graph_node.title = disk_node.title
+    elif content is DataNode:
+        (content as DataNode).data = _load_runtime_data()
+        _set_graph_node_title(graph_node, attributes, config)
+    else:
+        _set_graph_node_title(graph_node, attributes, config)
+
+
+func _set_subtitle(content: Control, subtitle: String) -> void:
+    if content is BaseNode:
+        (content as BaseNode).set_subtitle(subtitle)
+        return
+
+    var label := content.get_node_or_null("VBoxContainer/Label") as Label
+    if label:
+        label.text = subtitle
+
+
+func _set_graph_node_title(graph_node: GraphNode, attributes: Dictionary, config: Dictionary) -> void:
+    if attributes.has("title"):
+        graph_node.title = str(attributes["title"])
+    else:
+        graph_node.title = str(config.get("label", graph_node.name))
 
 
 func _build_node_rows(node: GraphNode, attributes: Dictionary) -> void:
@@ -207,14 +241,69 @@ func _get_slot_color(slot: Slot) -> Color:
     return Color.html(hex)
 
 
+func set_slot_operation(node: GraphNode, row_number: int, op_name: String, is_output: bool) -> void:
+    var operation := _parse_operation(op_name)
+    var slot_color := _get_slot_color(operation)
+    _disconnect_slot(node, row_number, is_output)
+    if is_output:
+        node.set_slot_enabled_right(row_number, true)
+        node.set_slot_type_right(row_number, operation)
+        node.set_slot_color_right(row_number, slot_color)
+    else:
+        node.set_slot_enabled_left(row_number, true)
+        node.set_slot_type_left(row_number, operation)
+        node.set_slot_color_left(row_number, slot_color)
+
+
+func _disconnect_slot(node: GraphNode, row_number: int, is_output: bool) -> void:
+    var port_index := _port_index_for_slot(node, row_number, is_output)
+    if port_index < 0:
+        return
+
+    var node_name := node.name
+    for conn in get_connection_list():
+        var from_name: StringName = conn.get("from_node", conn.get("from"))
+        var to_name: StringName = conn.get("to_node", conn.get("to"))
+        var from_port: int = conn.get("from_port", 0)
+        var to_port: int = conn.get("to_port", 0)
+        if is_output and from_name == node_name and from_port == port_index:
+            disconnect_node(from_name, from_port, to_name, to_port)
+        elif not is_output and to_name == node_name and to_port == port_index:
+            disconnect_node(from_name, from_port, to_name, to_port)
+
+
+func _port_index_for_slot(node: GraphNode, row_number: int, is_output: bool) -> int:
+    if is_output:
+        for i in node.get_output_port_count():
+            if node.get_output_port_slot(i) == row_number:
+                return i
+    else:
+        for i in node.get_input_port_count():
+            if node.get_input_port_slot(i) == row_number:
+                return i
+    return -1
+
+
 func _parse_operation(op_name: String) -> Slot:
     match op_name:
         "OPERATION_CODE":
             return Slot.OPERATION_CODE
+        "INT8":
+            return Slot.INT8
+        "INT16":
+            return Slot.INT16
         "INT32":
             return Slot.INT32
         "INT64":
             return Slot.INT64
+        "UINT8":
+            return Slot.UINT8
+        "UINT16":
+            return Slot.UINT16
+        "UINT32":
+            return Slot.UINT32
+        "UINT64":
+            return Slot.UINT64
         "DATA":
             return Slot.DATA
         _:

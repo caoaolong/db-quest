@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://8uasrwl7inv"]
+
+[ext_resource type="Script" uid="uid://c14cjkbcoa1bg" path="res://node/number_node.gd" id="1_4cygy"]
+[ext_resource type="PackedScene" uid="uid://diupwx6dksdpq" path="res://node/node_action_bar.tscn" id="1_son88"]
+
+[node name="NumberNode" type="PanelContainer" unique_id=21011674]
+script = ExtResource("1_4cygy")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1275804669]
+layout_mode = 2
+
+[node name="NodeActionBar" parent="VBoxContainer" unique_id=1300589146 instance=ExtResource("1_son88")]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer" unique_id=1138369894]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1199943410]
+layout_mode = 2
+
+[node name="OptionButton" type="OptionButton" parent="VBoxContainer/HBoxContainer" unique_id=1113978654]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+item_count = 4
+popup/item_0/text = "INT64"
+popup/item_0/id = 0
+popup/item_1/text = "INT32"
+popup/item_1/id = 1
+popup/item_2/text = "INT16"
+popup/item_2/id = 2
+popup/item_3/text = "INT8"
+popup/item_3/id = 3
+
+[node name="CheckBox" type="CheckBox" parent="VBoxContainer/HBoxContainer" unique_id=187433804]
+layout_mode = 2
+button_pressed = true
+text = "符号"

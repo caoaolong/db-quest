@@ -4,8 +4,9 @@
         "name": "认识磁盘",
         "nodes": [
             "SATA_HDD",
-            "DiskAdapter"
-        ]
+            "Number"
+        ],
+        "tasks": []
     },
     {
         "level": 2,

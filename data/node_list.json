@@ -2,21 +2,31 @@
     {
         "name": "SATA_HDD",
         "type": "Disk",
-        "label": "SATA HDD"
+        "label": "SATA HDD",
+        "category": "Disk"
     },
     {
         "name": "NVMe_SDD",
         "type": "Disk",
-        "label": "NVMe SDD"
+        "label": "NVMe SDD",
+        "category": "Disk"
     },
     {
         "name": "DiskAdapter",
         "type": "DiskAdapter",
-        "label": "Disk Adapter"
+        "label": "Disk Adapter",
+        "category": "Disk"
     },
     {
         "name": "LoadData",
         "type": "Data",
-        "label": "Load Data"
+        "label": "Load Data",
+        "category": "Tools"
+    },
+    {
+        "name": "Number",
+        "type": "Number",
+        "label": "Load Number",
+        "category": "Tools"
     }
 ]

@@ -4,6 +4,7 @@
 [ext_resource type="StyleBox" uid="uid://bhn0kgpjel2s0" path="res://button_bar.tres" id="3_wrb8p"]
 [ext_resource type="Script" uid="uid://d2jni5ucghw8o" path="res://button_bar.gd" id="4_button_bar"]
 [ext_resource type="PackedScene" uid="uid://u633aotie483" path="res://dialog/display_dialog.tscn" id="4_q0a35"]
+[ext_resource type="Script" uid="uid://bm6u423ifu2yg" path="res://editor.gd" id="5_editor"]
 
 [node name="Control" type="Control" unique_id=1066378090]
 layout_mode = 3
@@ -12,6 +13,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("5_editor")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1233018264]
 layout_mode = 1
@@ -23,11 +25,6 @@ grow_vertical = 2
 
 [node name="TabBar" type="TabBar" parent="VBoxContainer" unique_id=1123439592]
 layout_mode = 2
-current_tab = 0
-tab_count = 3
-tab_0/title = "Common"
-tab_1/title = "Disk"
-tab_2/title = "Data"
 
 [node name="ButtonBar" type="PanelContainer" parent="VBoxContainer" unique_id=1351552218]
 layout_mode = 2
