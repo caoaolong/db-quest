@@ -9,9 +9,11 @@ var current_level: int = 1
 var available_nodes: Array[String] = []
 var node_types: Dictionary = {}
 var node_list: Array = []
+var virtual_disk_path: String = ""
 
 
 func _ready() -> void:
+    virtual_disk_path = VirtualDisk.ensure_exists()
     _load_node_types()
     _load_node_list()
     _load_level_config()
@@ -43,6 +45,13 @@ func is_node_available(node_name: String) -> bool:
     return node_name in available_nodes
 
 
+func get_node_entry(template_name: String) -> Dictionary:
+    for item in node_list:
+        if item is Dictionary and str(item.get("name", "")) == template_name:
+            return item
+    return {}
+
+
 func resolve_node_config(item: Dictionary) -> Dictionary:
     var type_name := str(item.get("type", ""))
     if not node_types.has(type_name):
@@ -61,6 +70,13 @@ func resolve_node_config(item: Dictionary) -> Dictionary:
     if item.has("attributes") and item["attributes"] is Dictionary:
         var base_attributes: Dictionary = resolved.get("attributes", {})
         resolved["attributes"] = _merge_attributes(base_attributes, item["attributes"])
+
+    var attributes: Dictionary = resolved.get("attributes", {})
+    if not attributes.has("title"):
+        var label := str(item.get("label", ""))
+        if not label.is_empty():
+            attributes["title"] = label
+            resolved["attributes"] = attributes
 
     return resolved
 

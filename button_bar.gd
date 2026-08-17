@@ -2,7 +2,7 @@ extends PanelContainer
 
 @onready var _button_container: HBoxContainer = $MarginContainer/HBoxContainer
 @onready var _tab_bar: TabBar = get_node("../TabBar")
-@onready var _graph_edit: GraphEdit = get_node("../GraphEdit")
+@onready var _graph_edit: GraphEdit = get_node("../../../GraphEdit")
 
 
 func _ready() -> void:

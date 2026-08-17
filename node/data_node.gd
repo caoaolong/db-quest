@@ -1,8 +1,8 @@
 class_name DataNode
 extends BaseNode
 
-var data: String
+var runtime_data: String = ""
 
 
 func _on_display_clicked() -> void:
-    action.display_data(data)
+    action.display_data(runtime_data)

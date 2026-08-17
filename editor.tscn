@@ -6,44 +6,71 @@
 [ext_resource type="PackedScene" uid="uid://u633aotie483" path="res://dialog/display_dialog.tscn" id="4_q0a35"]
 [ext_resource type="Script" uid="uid://bm6u423ifu2yg" path="res://editor.gd" id="5_editor"]
 
-[node name="Control" type="Control" unique_id=1066378090]
-layout_mode = 3
+[node name="Control" type="PanelContainer" unique_id=728991178]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/panel = ExtResource("3_wrb8p")
 script = ExtResource("5_editor")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1233018264]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="TabBar" type="TabBar" parent="VBoxContainer" unique_id=1123439592]
 layout_mode = 2
 
-[node name="ButtonBar" type="PanelContainer" parent="VBoxContainer" unique_id=1351552218]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=249434175]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer" unique_id=203853117]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TabBar" type="TabBar" parent="VBoxContainer/HBoxContainer/VBoxContainer" unique_id=1123439592]
+layout_mode = 2
+
+[node name="ButtonBar" type="PanelContainer" parent="VBoxContainer/HBoxContainer/VBoxContainer" unique_id=1351552218]
 layout_mode = 2
 theme_override_styles/panel = ExtResource("3_wrb8p")
 script = ExtResource("4_button_bar")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/ButtonBar" unique_id=1587139510]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer/VBoxContainer/ButtonBar" unique_id=1587139510]
 layout_mode = 2
 theme_override_constants/margin_left = 4
 theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 4
 theme_override_constants/margin_bottom = 4
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ButtonBar/MarginContainer" unique_id=633267548]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/HBoxContainer/VBoxContainer/ButtonBar/MarginContainer" unique_id=633267548]
 layout_mode = 2
+
+[node name="ButtonContainer" type="PanelContainer" parent="VBoxContainer/HBoxContainer" unique_id=46636664]
+layout_mode = 2
+theme_override_styles/panel = ExtResource("3_wrb8p")
+
+[node name="GridContainer" type="GridContainer" parent="VBoxContainer/HBoxContainer/ButtonContainer" unique_id=198513212]
+layout_mode = 2
+columns = 2
+
+[node name="Tasks" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=1534718186]
+layout_mode = 2
+text = "Tasks"
+
+[node name="Run2" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=802850326]
+layout_mode = 2
+text = "Run"
+
+[node name="Run3" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=1498294126]
+layout_mode = 2
+text = "Run"
+
+[node name="Run4" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=1313103170]
+layout_mode = 2
+text = "Run"
 
 [node name="GraphEdit" type="GraphEdit" parent="VBoxContainer" unique_id=955933790]
 layout_mode = 2
 size_flags_vertical = 3
+scroll_offset = Vector2(0, -35)
 script = ExtResource("1_wlowb")
 
 [node name="DisplayDialog" parent="." unique_id=406800570 instance=ExtResource("4_q0a35")]

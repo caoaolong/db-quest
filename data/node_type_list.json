@@ -2,7 +2,6 @@
     "Disk": {
         "scene": "res://node/disk_node.tscn",
         "attributes": {
-            "title": "512 GB",
             "subtitle": "当前用量",
             "slots": [
                 {
@@ -19,14 +18,14 @@
                 {
                     "row_number": 2.0,
                     "row_name": "Data Bus",
-                    "operation": "INT64",
+                    "operation": "INT",
                     "op_list": [
                         {
-                            "operation": "INT64",
+                            "operation": "INT",
                             "type": "INPUT"
                         },
                         {
-                            "operation": "INT64",
+                            "operation": "INT",
                             "type": "OUTPUT"
                         }
                     ]
@@ -34,10 +33,10 @@
                 {
                     "row_number": 3.0,
                     "row_name": "Address Bus",
-                    "operation": "INT64",
+                    "operation": "ADDR",
                     "op_list": [
                         {
-                            "operation": "INT64",
+                            "operation": "ADDR",
                             "type": "INPUT"
                         }
                     ]
@@ -75,7 +74,7 @@
                             "type": "INPUT"
                         },
                         {
-                            "operation": "INT64",
+                            "operation": "INT",
                             "type": "OUTPUT"
                         }
                     ]
@@ -85,11 +84,11 @@
                     "row_number_input": "Address",
                     "op_list": [
                         {
-                            "operation": "INT64",
+                            "operation": "INT",
                             "type": "INPUT"
                         },
                         {
-                            "operation": "INT64",
+                            "operation": "ADDR",
                             "type": "OUTPUT"
                         }
                     ]
@@ -121,16 +120,36 @@
         "scene": "res://node/number_node.tscn",
         "attributes": {
             "title": "数字节点",
-            "subtitle": "当前选择",
+            "subtitle": "INT",
             "slots": [
                 {
                     "row_number": 1.0,
-                    "row_number_input": "Number",
-                    "operation": "INT64",
+                    "row_name": "Number",
+                    "operation": "INT",
                     "op_list": [
                         {
-                            "operation": "INT64",
+                            "operation": "INT",
                             "type": "OUTPUT"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "Preview": {
+        "scene": "res://node/preview_node.tscn",
+        "attributes": {
+            "title": "预览节点",
+            "subtitle": "当前数据",
+            "slots": [
+                {
+                    "row_number": 1.0,
+                    "row_name": "Data",
+                    "operation": "DATA",
+                    "op_list": [
+                        {
+                            "operation": "DATA",
+                            "type": "INPUT"
                         }
                     ]
                 }

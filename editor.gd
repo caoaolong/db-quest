@@ -1,6 +1,6 @@
-extends Control
+extends PanelContainer
 
-@onready var _tab_bar: TabBar = $VBoxContainer/TabBar
+@onready var _tab_bar: TabBar = $VBoxContainer/HBoxContainer/VBoxContainer/TabBar
 
 
 func _ready() -> void:
