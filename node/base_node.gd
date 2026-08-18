@@ -2,6 +2,7 @@ class_name BaseNode
 extends PanelContainer
 
 @export var subtitle: String = ""
+var category: String = ""
 var data: Dictionary = {}
 
 @onready var action: NodeActionBar = $VBoxContainer/NodeActionBar
@@ -60,6 +61,15 @@ func schedule_save() -> void:
         graph_edit.schedule_save()
 
 
+func run(_inputs: Dictionary = {}) -> Variant:
+    return null
+
+
+func get_user_input() -> Variant:
+    _sync_data_from_controls()
+    return data.get("value")
+
+
 func _sync_data_from_controls() -> void:
     pass
 
@@ -108,6 +118,13 @@ func _sync_subtitle_label() -> void:
 func _ready() -> void:
     _sync_subtitle_label()
     _bind_action_bar()
+    _configure_action_bar()
+
+
+func _configure_action_bar() -> void:
+    if action == null:
+        return
+    action.set_run_visible(category != "Tools")
 
 
 func _bind_action_bar() -> void:
@@ -116,6 +133,17 @@ func _bind_action_bar() -> void:
 
     action.delete_clicked.connect(_on_delete_clicked)
     action.display_clicked.connect(_on_display_clicked)
+    action.run_clicked.connect(_on_run_clicked)
+
+
+func _on_run_clicked() -> void:
+    var graph_node := get_parent() as GraphNode
+    if graph_node == null:
+        return
+
+    var graph_edit := graph_node.get_parent()
+    if graph_edit != null and graph_edit.has_method("run_node"):
+        graph_edit.run_node(graph_node)
 
 
 func _on_display_clicked() -> void:

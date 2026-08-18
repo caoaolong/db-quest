@@ -21,3 +21,7 @@ func _sync_controls_from_data() -> void:
 func _on_value_changed(_value: float) -> void:
     _sync_data_from_controls()
     schedule_save()
+
+
+func run(inputs: Dictionary = {}) -> Variant:
+    return get_user_input()

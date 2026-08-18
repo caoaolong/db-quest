@@ -4,7 +4,9 @@
         "name": "认识磁盘",
         "nodes": [
             "SATA_HDD",
-            "Number"
+            "Number",
+            "Operation",
+            "Data"
         ],
         "tasks": []
     },

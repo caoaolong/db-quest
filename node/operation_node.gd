@@ -1,7 +1,7 @@
-class_name DataNode
+class_name OperationNode
 extends BaseNode
 
-@onready var value_input: TextEdit = $VBoxContainer/TextEdit
+@onready var value_input: LineEdit = $VBoxContainer/LineEdit
 
 
 func _ready() -> void:
@@ -18,15 +18,10 @@ func _sync_controls_from_data() -> void:
         value_input.text = str(data["value"])
 
 
-func run(_inputs: Dictionary = {}) -> Variant:
-    return get_user_input()
-
-
-func _on_text_changed() -> void:
+func _on_text_changed(_text: String) -> void:
     _sync_data_from_controls()
     schedule_save()
 
 
-func _on_display_clicked() -> void:
-    _sync_data_from_controls()
-    action.display_data(str(data.get("value", "")))
+func run(inputs: Dictionary = {}) -> Variant:
+    return get_user_input()

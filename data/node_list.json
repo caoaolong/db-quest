@@ -18,7 +18,7 @@
         "category": "Disk"
     },
     {
-        "name": "LoadData",
+        "name": "Data",
         "type": "Data",
         "label": "Load Data",
         "category": "Tools"
@@ -27,6 +27,12 @@
         "name": "Number",
         "type": "Number",
         "label": "Load Number",
+        "category": "Tools"
+    },
+    {
+        "name": "Operation",
+        "type": "Operation",
+        "label": "Load Operation",
         "category": "Tools"
     }
 ]

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dhjbc2ratmyf1"]
 
 [ext_resource type="PackedScene" uid="uid://diupwx6dksdpq" path="res://node/node_action_bar.tscn" id="1_uc83u"]
-[ext_resource type="Script" path="res://node/data_node.gd" id="2_data"]
+[ext_resource type="Script" uid="uid://cbrgkat1bqscs" path="res://node/data_node.gd" id="2_data"]
 
 [node name="DataNode" type="PanelContainer" unique_id=469074291]
 custom_minimum_size = Vector2(120, 0)
@@ -15,5 +15,6 @@ layout_mode = 2
 [node name="NodeActionBar" parent="VBoxContainer" unique_id=1304589146 instance=ExtResource("1_uc83u")]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="VBoxContainer" unique_id=838308764]
+[node name="TextEdit" type="TextEdit" parent="VBoxContainer" unique_id=1001503174]
+custom_minimum_size = Vector2(0, 100)
 layout_mode = 2

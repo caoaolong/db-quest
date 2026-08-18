@@ -2,25 +2,36 @@
 
 [ext_resource type="Script" uid="uid://qerko33x7sgk" path="res://node/node_action_bar.gd" id="1_f1rk2"]
 
-[node name="NodeActionBar" type="HBoxContainer" unique_id=1300589146]
+[node name="NodeActionBar" type="VBoxContainer" unique_id=1832665264]
+offset_right = 207.0
+offset_bottom = 136.0
 script = ExtResource("1_f1rk2")
 
-[node name="Button" type="Button" parent="." unique_id=852697457]
+[node name="ProgressBar" type="ProgressBar" parent="." unique_id=1072663584]
+custom_maximum_size = Vector2(-1, 10)
+layout_mode = 2
+show_percentage = false
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1676999184]
+layout_mode = 2
+
+[node name="Run" type="Button" parent="HBoxContainer" unique_id=852697457]
 layout_mode = 2
 text = "Run"
 
-[node name="Delete" type="Button" parent="." unique_id=1952599860]
+[node name="Delete" type="Button" parent="HBoxContainer" unique_id=1952599860]
 layout_mode = 2
 text = "Delete"
 
-[node name="Display" type="Button" parent="." unique_id=654982439]
+[node name="Display" type="Button" parent="HBoxContainer" unique_id=654982439]
 layout_mode = 2
 text = "Display"
 
-[node name="Help" type="Button" parent="." unique_id=2065330903]
+[node name="Help" type="Button" parent="HBoxContainer" unique_id=2065330903]
 layout_mode = 2
 text = "Help"
 
-[connection signal="pressed" from="Delete" to="." method="_on_delete_pressed"]
-[connection signal="pressed" from="Display" to="." method="_on_display_pressed"]
-[connection signal="pressed" from="Help" to="." method="_on_help_pressed"]
+[connection signal="pressed" from="HBoxContainer/Run" to="." method="_on_run_pressed"]
+[connection signal="pressed" from="HBoxContainer/Delete" to="." method="_on_delete_pressed"]
+[connection signal="pressed" from="HBoxContainer/Display" to="." method="_on_display_pressed"]
+[connection signal="pressed" from="HBoxContainer/Help" to="." method="_on_help_pressed"]

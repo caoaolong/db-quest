@@ -2,7 +2,7 @@
     "Disk": {
         "scene": "res://node/disk_node.tscn",
         "attributes": {
-            "subtitle": "当前用量",
+            "subtitle": "- / -",
             "slots": [
                 {
                     "row_number": 1.0,
@@ -18,14 +18,14 @@
                 {
                     "row_number": 2.0,
                     "row_name": "Data Bus",
-                    "operation": "INT",
+                    "operation": "DATA",
                     "op_list": [
                         {
-                            "operation": "INT",
+                            "operation": "DATA",
                             "type": "INPUT"
                         },
                         {
-                            "operation": "INT",
+                            "operation": "DATA",
                             "type": "OUTPUT"
                         }
                     ]
@@ -33,10 +33,10 @@
                 {
                     "row_number": 3.0,
                     "row_name": "Address Bus",
-                    "operation": "ADDR",
+                    "operation": "INT",
                     "op_list": [
                         {
-                            "operation": "ADDR",
+                            "operation": "INT",
                             "type": "INPUT"
                         }
                     ]
@@ -88,7 +88,7 @@
                             "type": "INPUT"
                         },
                         {
-                            "operation": "ADDR",
+                            "operation": "INT",
                             "type": "OUTPUT"
                         }
                     ]
@@ -129,6 +129,25 @@
                     "op_list": [
                         {
                             "operation": "INT",
+                            "type": "OUTPUT"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "Operation": {
+        "scene": "res://node/operation_node.tscn",
+        "attributes": {
+            "subtitle": "OP",
+            "slots": [
+                {
+                    "row_number": 1.0,
+                    "row_name": "Operation",
+                    "operation": "OPERATION_CODE",
+                    "op_list": [
+                        {
+                            "operation": "OPERATION_CODE",
                             "type": "OUTPUT"
                         }
                     ]

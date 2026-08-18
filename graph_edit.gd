@@ -8,20 +8,17 @@ enum SlotType {
 enum Slot {
     OPERATION_CODE,
     INT,
-    ADDR,
     DATA,
 }
 
 const SLOT_COLORS: Dictionary = {
     Slot.OPERATION_CODE: "#F59E0B",
     Slot.INT: "#3B82F6",
-    Slot.ADDR: "#8B5CF6",
     Slot.DATA: "#A855F7",
 }
 
 const node_style = preload("res://node/node_style.tres")
 const ROW_HORIZONTAL_MARGIN := 12
-const RUNTIME_DATA_PATH := "res://data/runtime/%d.data"
 
 var _is_restoring := false
 var _save_timer: Timer
@@ -82,6 +79,132 @@ func _on_disconnection_request(from_node: StringName, from_port: int, to_node: S
     schedule_save()
 
 
+func run_node(target: GraphNode) -> void:
+    var order := compute_execution_order(target)
+    if order.is_empty():
+        order = [target]
+
+    var results: Dictionary = {}
+    print("开始执行（目标节点: %s）" % target.name)
+
+    for index in order.size():
+        var graph_node: GraphNode = order[index]
+        var template_name := str(graph_node.get_meta("template_name", graph_node.name))
+        var content := graph_node.get_child(0)
+
+        print("[%d] %s (%s)" % [index + 1, graph_node.name, template_name])
+        if not content is BaseNode:
+            print("  结果: （未实现 run）")
+            continue
+
+        var node := content as BaseNode
+        var inputs := _collect_run_inputs(graph_node, results)
+        var result: Variant = node.run(inputs)
+        results[String(graph_node.name)] = result
+        print("  结果: %s" % result)
+
+
+func _collect_run_inputs(graph_node: GraphNode, results: Dictionary) -> Dictionary:
+    var inputs := {}
+    var node_name := String(graph_node.name)
+
+    for conn in get_connection_list():
+        var to_name := String(conn.get("to_node", conn.get("to")))
+        if to_name != node_name:
+            continue
+
+        var from_name := String(conn.get("from_node", conn.get("from")))
+        var to_port := int(conn.get("to_port", 0))
+        if results.has(from_name):
+            inputs[str(to_port)] = results[from_name]
+
+    return inputs
+
+
+func compute_execution_order(target: GraphNode) -> Array:
+    var closure := _collect_upstream_closure(target)
+    if closure.is_empty():
+        return [target]
+
+    var in_degree: Dictionary = {}
+    var adjacency: Dictionary = {}
+    for node_name in closure.keys():
+        in_degree[node_name] = 0
+        adjacency[node_name] = []
+
+    for conn in get_connection_list():
+        var from_name := String(conn.get("from_node", conn.get("from")))
+        var to_name := String(conn.get("to_node", conn.get("to")))
+        if not closure.has(from_name) or not closure.has(to_name):
+            continue
+        adjacency[from_name].append(to_name)
+        in_degree[to_name] = int(in_degree[to_name]) + 1
+
+    var ready: Array[String] = []
+    for node_name in closure.keys():
+        if int(in_degree[node_name]) == 0:
+            ready.append(node_name)
+    ready.sort()
+
+    var order: Array = []
+    while not ready.is_empty():
+        var node_name: String = ready.pop_front()
+        order.append(closure[node_name])
+        for next_name in adjacency[node_name]:
+            in_degree[next_name] = int(in_degree[next_name]) - 1
+            if int(in_degree[next_name]) == 0:
+                ready.append(next_name)
+        ready.sort()
+
+    if order.size() != closure.size():
+        push_warning("Graph cycle detected while computing execution order for: %s" % target.name)
+        for node_name in closure.keys():
+            var graph_node: GraphNode = closure[node_name]
+            if not graph_node in order:
+                order.append(graph_node)
+
+    return order
+
+
+func _collect_upstream_closure(target: GraphNode) -> Dictionary:
+    var closure: Dictionary = {}
+    var stack: Array[GraphNode] = [target]
+
+    while not stack.is_empty():
+        var node: GraphNode = stack.pop_back()
+        var node_name := String(node.name)
+        if closure.has(node_name):
+            continue
+        closure[node_name] = node
+
+        for upstream in _get_direct_upstream_nodes(node):
+            stack.append(upstream)
+
+    return closure
+
+
+func _get_direct_upstream_nodes(graph_node: GraphNode) -> Array:
+    var result: Array = []
+    var seen: Dictionary = {}
+    var node_name := String(graph_node.name)
+
+    for conn in get_connection_list():
+        var to_name := String(conn.get("to_node", conn.get("to")))
+        if to_name != node_name:
+            continue
+
+        var from_name := String(conn.get("from_node", conn.get("from")))
+        if seen.has(from_name):
+            continue
+        seen[from_name] = true
+
+        var from_node := get_node_or_null(NodePath(from_name)) as GraphNode
+        if from_node:
+            result.append(from_node)
+
+    return result
+
+
 func create_node_from_config(
     item: Dictionary,
     instance_id: String = "",
@@ -108,7 +231,7 @@ func create_node_from_config(
         return null
 
     var attributes := config.get("attributes", {}) as Dictionary
-    var node := GraphNode.new()
+    var node := QuestGraphNode.new()
     if instance_id.is_empty():
         instance_id = _generate_instance_id(template_name)
     node.name = instance_id
@@ -116,6 +239,8 @@ func create_node_from_config(
     node.add_theme_stylebox_override("panel", node_style)
 
     var content := scene.instantiate() as Control
+    if content is BaseNode:
+        (content as BaseNode).category = str(config.get("category", ""))
     _apply_node_attributes(content, attributes, config, node)
     content.set_anchors_preset(Control.PRESET_FULL_RECT)
     content.offset_left = 0
@@ -264,29 +389,12 @@ func _apply_node_state(content: Control, state: Dictionary) -> void:
         (content as BaseNode).apply_persisted_data(state)
 
 
-func _load_runtime_data() -> String:
-    var path := RUNTIME_DATA_PATH % GameState.current_level
-    if not FileAccess.file_exists(path):
-        push_error("Runtime data file not found: %s" % path)
-        return ""
-
-    var file := FileAccess.open(path, FileAccess.READ)
-    if file == null:
-        push_error("Failed to open runtime data file: %s" % path)
-        return ""
-
-    return file.get_as_text()
-
-
 func _apply_node_attributes(content: Control, attributes: Dictionary, config: Dictionary, graph_node: GraphNode) -> void:
     if content is DiskNode:
         var disk_node := content as DiskNode
         if attributes.has("title"):
             disk_node.title = str(attributes["title"])
         graph_node.title = disk_node.title
-    elif content is DataNode:
-        (content as DataNode).runtime_data = _load_runtime_data()
-        _set_graph_node_title(graph_node, attributes, config)
     else:
         _set_graph_node_title(graph_node, attributes, config)
 
@@ -391,7 +499,7 @@ func _create_row_control(
         var spin_box := SpinBox.new()
         spin_box.min_value = 0
         match operation:
-            Slot.INT, Slot.ADDR:
+            Slot.INT:
                 spin_box.max_value = 9223372036854775807
             _:
                 spin_box.max_value = 100
@@ -460,8 +568,6 @@ func _parse_operation(op_name: String) -> Slot:
             return Slot.OPERATION_CODE
         "INT":
             return Slot.INT
-        "ADDR":
-            return Slot.ADDR
         "DATA":
             return Slot.DATA
         _:
