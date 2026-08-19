@@ -1,13 +1,13 @@
 {
     "Disk": {
         "scene": "res://node/disk_node.tscn",
+        "unique": true,
         "attributes": {
             "subtitle": "- / -",
             "slots": [
                 {
                     "row_number": 1.0,
                     "row_name": "Control Bus",
-                    "operation": "OPERATION_CODE",
                     "op_list": [
                         {
                             "operation": "OPERATION_CODE",
@@ -18,7 +18,6 @@
                 {
                     "row_number": 2.0,
                     "row_name": "Data Bus",
-                    "operation": "DATA",
                     "op_list": [
                         {
                             "operation": "DATA",
@@ -33,7 +32,6 @@
                 {
                     "row_number": 3.0,
                     "row_name": "Address Bus",
-                    "operation": "INT",
                     "op_list": [
                         {
                             "operation": "INT",
@@ -46,6 +44,7 @@
     },
     "DiskAdapter": {
         "scene": "res://node/disk_adapter_node.tscn",
+        "unique": true,
         "attributes": {
             "title": "磁盘适配器",
             "subtitle": "...",
@@ -57,7 +56,6 @@
                         "WRITE",
                         "CHECK"
                     ],
-                    "operation": "OPERATION_CODE",
                     "op_list": [
                         {
                             "operation": "OPERATION_CODE",
@@ -105,7 +103,6 @@
                 {
                     "row_number": 1.0,
                     "row_name": "Data",
-                    "operation": "DATA",
                     "op_list": [
                         {
                             "operation": "DATA",
@@ -125,7 +122,6 @@
                 {
                     "row_number": 1.0,
                     "row_name": "Number",
-                    "operation": "INT",
                     "op_list": [
                         {
                             "operation": "INT",
@@ -144,7 +140,6 @@
                 {
                     "row_number": 1.0,
                     "row_name": "Operation",
-                    "operation": "OPERATION_CODE",
                     "op_list": [
                         {
                             "operation": "OPERATION_CODE",
@@ -155,24 +150,12 @@
             ]
         }
     },
-    "Preview": {
-        "scene": "res://node/preview_node.tscn",
+    "Check": {
+        "scene": "res://node/check_node.tscn",
+        "unique": true,
         "attributes": {
-            "title": "预览节点",
-            "subtitle": "当前数据",
-            "slots": [
-                {
-                    "row_number": 1.0,
-                    "row_name": "Data",
-                    "operation": "DATA",
-                    "op_list": [
-                        {
-                            "operation": "DATA",
-                            "type": "INPUT"
-                        }
-                    ]
-                }
-            ]
+            "title": "校验器",
+            "slots": []
         }
     }
 }

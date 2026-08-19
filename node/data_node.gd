@@ -1,6 +1,12 @@
 class_name DataNode
 extends BaseNode
 
+"""
+{
+    "value": ""
+}
+"""
+
 @onready var value_input: TextEdit = $VBoxContainer/TextEdit
 
 

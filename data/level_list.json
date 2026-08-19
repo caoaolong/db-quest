@@ -8,6 +8,23 @@
             "Operation",
             "Data"
         ],
+        "variables": {
+            "write_string": "HELLO,DBQUEST!"
+        },
+        "check": {
+            "slots": [
+                {
+                    "row_number": 1.0,
+                    "row_name": "磁盘数据校验",
+                    "op_list": [
+                        {
+                            "operation": "DATA",
+                            "type": "INPUT"
+                        }
+                    ]
+                }
+            ]
+        },
         "tasks": [
             {
                 "title": "检测大小",
@@ -16,7 +33,28 @@
                     "EXP": 1000,
                     "COIN": 100
                 },
-                "target": ""
+                "trigger": "after(Disk->run)",
+                "goal": "Disk.size > 0"
+            },
+            {
+                "title": "写入扇区",
+                "description": "请使用「WRITE」指令在「0」扇区写入数据「${write_string}」",
+                "reward": {
+                    "EXP": 1000,
+                    "COIN": 100
+                },
+                "trigger": "after(VD->write)",
+                "goal": "VD[0] == ${write_string}"
+            },
+            {
+                "title": "读取扇区",
+                "description": "请使用「READ」将「0」扇区的数据读取到校验器的第「1」行",
+                "reward": {
+                    "EXP": 1000,
+                    "COIN": 100
+                },
+                "trigger": "on(Check->input)",
+                "goal": "Check.rows[1] == ${write_string}"
             }
         ]
     },

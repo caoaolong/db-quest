@@ -19,6 +19,7 @@ const SLOT_COLORS: Dictionary = {
 
 const node_style = preload("res://node/node_style.tres")
 const ROW_HORIZONTAL_MARGIN := 12
+const SYSTEM_CHECK_POSITION := Vector2(520, 280)
 
 var _is_restoring := false
 var _save_timer: Timer
@@ -102,6 +103,10 @@ func run_node(target: GraphNode) -> void:
         var result: Variant = node.run(inputs)
         results[String(graph_node.name)] = result
         print("  结果: %s" % result)
+
+        var node_type := str(graph_node.get_meta("node_type", ""))
+        if node_type == "Disk":
+            TaskTrigger.handle(TaskTrigger.AFTER_DISK_RUN, self)
 
 
 func _collect_run_inputs(graph_node: GraphNode, results: Dictionary) -> Dictionary:
@@ -205,16 +210,15 @@ func _get_direct_upstream_nodes(graph_node: GraphNode) -> Array:
     return result
 
 
-func has_disk_node() -> bool:
+func has_node_type(node_type: String) -> bool:
+    if node_type.is_empty():
+        return false
+
     for child in get_children():
         if not child is GraphNode:
             continue
 
-        var graph_node := child as GraphNode
-        if graph_node.get_child_count() == 0:
-            continue
-
-        if graph_node.get_child(0) is DiskNode:
+        if str((child as GraphNode).get_meta("node_type", "")) == node_type:
             return true
 
     return false
@@ -224,7 +228,8 @@ func create_node_from_config(
     item: Dictionary,
     instance_id: String = "",
     node_position: Variant = null,
-    state: Dictionary = {}
+    state: Dictionary = {},
+    allow_system: bool = false
 ) -> GraphNode:
     var config := GameState.resolve_node_config(item)
     if config.is_empty():
@@ -232,12 +237,19 @@ func create_node_from_config(
 
     var template_name := str(config.get("name", ""))
     var node_type := str(config.get("type", ""))
-    if not GameState.is_node_available(template_name):
+    var category := str(config.get("category", ""))
+
+    if category == "System" and not allow_system:
+        EditorLog.warn("系统节点不支持手动创建")
+        return null
+
+    if category != "System" and not GameState.is_node_available(template_name):
         EditorLog.warn("Node is not available in current level: %s" % template_name)
         return null
 
-    if node_type == "Disk" and has_disk_node():
-        EditorLog.warn("画布中只能存在一个磁盘节点")
+    if bool(config.get("unique", false)) and has_node_type(node_type):
+        var node_label := str(config.get("label", node_type))
+        EditorLog.warn("画布中只能存在一个 %s 节点" % node_label)
         return null
 
     var scene_path := str(config.get("scene", ""))
@@ -256,6 +268,7 @@ func create_node_from_config(
         instance_id = _generate_instance_id(template_name)
     node.name = instance_id
     node.set_meta("template_name", template_name)
+    node.set_meta("node_type", node_type)
     node.add_theme_stylebox_override("panel", node_style)
 
     var content := scene.instantiate() as Control
@@ -268,12 +281,15 @@ func create_node_from_config(
     content.offset_right = 0
     content.offset_bottom = 0
     node.add_child(content)
-    if attributes.has("subtitle"):
+    if attributes.has("subtitle") and not content is CheckNode:
         _set_subtitle(content, str(attributes["subtitle"]))
     node.set_slot_enabled_left(0, false)
     node.set_slot_enabled_right(0, false)
 
     _build_node_rows(node, attributes)
+
+    if content is CheckNode:
+        (content as CheckNode).call_deferred("refresh_display")
 
     if node_position is Vector2:
         node.position_offset = node_position
@@ -339,46 +355,58 @@ func export_snapshot() -> Dictionary:
 
 
 func load_snapshot() -> void:
-    var snapshot := GraphSnapshot.load(GameState.current_level)
-    if snapshot.is_empty():
-        return
-
     _is_restoring = true
     clear_graph()
 
-    for node_data in snapshot.get("nodes", []):
-        if not node_data is Dictionary:
-            continue
+    var snapshot := GraphSnapshot.load(GameState.current_level)
+    if not snapshot.is_empty():
+        for node_data in snapshot.get("nodes", []):
+            if not node_data is Dictionary:
+                continue
 
-        var template_name := str(node_data.get("template_name", ""))
-        var item := GameState.get_node_entry(template_name)
-        if item.is_empty():
-            continue
+            var template_name := str(node_data.get("template_name", ""))
+            var item := GameState.get_node_create_item(template_name)
+            if item.is_empty():
+                continue
 
-        var position_dict: Dictionary = node_data.get("position", {})
-        var node_position := Vector2(
-            float(position_dict.get("x", 0.0)),
-            float(position_dict.get("y", 0.0))
-        )
-        var state: Dictionary = node_data.get("state", {})
-        create_node_from_config(
-            item,
-            str(node_data.get("instance_id", "")),
-            node_position,
-            state
-        )
+            var position_dict: Dictionary = node_data.get("position", {})
+            var node_position := Vector2(
+                float(position_dict.get("x", 0.0)),
+                float(position_dict.get("y", 0.0))
+            )
+            var state: Dictionary = node_data.get("state", {})
+            create_node_from_config(
+                item,
+                str(node_data.get("instance_id", "")),
+                node_position,
+                state,
+                GameState.is_system_node_name(template_name)
+            )
 
-    for conn in snapshot.get("connections", []):
-        if not conn is Dictionary:
-            continue
-        connect_node(
-            StringName(conn.get("from_node", "")),
-            int(conn.get("from_port", 0)),
-            StringName(conn.get("to_node", "")),
-            int(conn.get("to_port", 0))
-        )
+        for conn in snapshot.get("connections", []):
+            if not conn is Dictionary:
+                continue
+            connect_node(
+                StringName(conn.get("from_node", "")),
+                int(conn.get("from_port", 0)),
+                StringName(conn.get("to_node", "")),
+                int(conn.get("to_port", 0))
+            )
 
+    _ensure_system_nodes()
     _is_restoring = false
+    schedule_save()
+
+
+func _ensure_system_nodes() -> void:
+    if has_node_type("Check"):
+        return
+
+    var item := GameState.get_node_create_item("Check")
+    if item.is_empty():
+        return
+
+    create_node_from_config(item, "Check", SYSTEM_CHECK_POSITION, {}, true)
 
 
 func _exit_tree() -> void:
@@ -443,12 +471,12 @@ func _build_node_rows(node: GraphNode, attributes: Dictionary) -> void:
 
 
 func _add_row_from_config(node: GraphNode, row: Dictionary) -> void:
+    var op_list := _parse_op_list(row.get("op_list", []))
     create_node_row(
         node,
         int(row.get("row_number", 0)),
         str(row.get("row_name", "")),
-        _parse_operation(str(row.get("operation", ""))),
-        _parse_op_list(row.get("op_list", [])),
+        op_list,
         row.get("row_options", []),
         str(row.get("row_number_input", ""))
     )
@@ -458,11 +486,11 @@ func create_node_row(
     node: GraphNode,
     _row_number: int,
     row_name: String,
-    operation: Slot,
     op_list: Array,
     row_options: Variant = [],
     row_number_input: String = ""
 ) -> int:
+    var operation := _resolve_row_operation(op_list)
     var row_control := _create_row_control(row_name, row_options, row_number_input, operation)
     _bind_row_control_save(row_control)
     node.add_child(_wrap_row_control(row_control))
@@ -605,6 +633,17 @@ func _parse_op_list(raw_list: Variant) -> Array:
                     "type": _parse_slot_type(str(item.get("type", ""))),
                 })
     return result
+
+
+func _resolve_row_operation(op_list: Array) -> Slot:
+    if op_list.is_empty():
+        return Slot.OPERATION_CODE
+
+    for op in op_list:
+        if op.type == SlotType.INPUT:
+            return op.operation
+
+    return op_list[0].operation
 
 
 func _parse_slot_type(type_name: String) -> SlotType:

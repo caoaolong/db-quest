@@ -1,6 +1,14 @@
 class_name BaseNode
 extends PanelContainer
 
+"""
+{
+    "rows": {
+        "1": 0
+    }
+}
+"""
+
 @export var subtitle: String = ""
 var category: String = ""
 var data: Dictionary = {}
@@ -59,6 +67,13 @@ func schedule_save() -> void:
         return
     if graph_edit.has_method("schedule_save"):
         graph_edit.schedule_save()
+
+
+func get_graph_edit() -> GraphEdit:
+    var graph_node := get_parent() as GraphNode
+    if graph_node == null:
+        return null
+    return graph_node.get_parent() as GraphEdit
 
 
 func run(_inputs: Dictionary = {}) -> Variant:

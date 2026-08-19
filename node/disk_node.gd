@@ -1,6 +1,12 @@
 class_name DiskNode
 extends BaseNode
 
+"""
+{
+    "size": 0
+}
+"""
+
 @export var title: String = "磁盘"
 
 @onready var progress: ProgressBar = $VBoxContainer/ProgressBar
@@ -90,6 +96,10 @@ func _run_write(disk_path: String, slot_inputs: Dictionary) -> Dictionary:
     var encoded := _encode_sector_data(slot_inputs.get(2))
     var sector_data: PackedByteArray = encoded["sector"]
     var success := VirtualDisk.write_sector(disk_path, sector_index, sector_data)
+    if success:
+        var graph_edit := get_graph_edit()
+        if graph_edit != null:
+            TaskTrigger.handle(TaskTrigger.AFTER_VD_WRITE, graph_edit)
     return {
         "operation": "WRITE",
         "sector": sector_index,

@@ -34,5 +34,11 @@
         "type": "Operation",
         "label": "Load Operation",
         "category": "Tools"
+    },
+    {
+        "name": "Check",
+        "type": "Check",
+        "label": "Check",
+        "category": "System"
     }
 ]

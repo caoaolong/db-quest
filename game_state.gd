@@ -8,6 +8,9 @@ const NODE_LIST_PATH := "res://data/node_list.json"
 var current_level: int = 1
 var available_nodes: Array[String] = []
 var current_tasks: Array = []
+var current_variables: Dictionary = {}
+var completed_task_indices: Array[int] = []
+var level_check_config: Dictionary = {}
 var node_types: Dictionary = {}
 var node_list: Array = []
 var virtual_disk_path: String = ""
@@ -33,7 +36,7 @@ func get_categories() -> Array[String]:
             continue
 
         var category := str(item.get("category", ""))
-        if category.is_empty() or seen.has(category):
+        if category.is_empty() or category == "System" or seen.has(category):
             continue
 
         seen[category] = true
@@ -50,11 +53,61 @@ func get_current_level_tasks() -> Array:
     return current_tasks.duplicate(true)
 
 
+func get_current_level_variables() -> Dictionary:
+    return current_variables.duplicate(true)
+
+
+func is_task_completed(task_index: int) -> bool:
+    return task_index in completed_task_indices
+
+
+func mark_task_completed(task_index: int) -> void:
+    if task_index < 0 or task_index in completed_task_indices:
+        return
+    completed_task_indices.append(task_index)
+
+
+func reset_task_progress() -> void:
+    completed_task_indices.clear()
+
+
 func get_node_entry(template_name: String) -> Dictionary:
     for item in node_list:
         if item is Dictionary and str(item.get("name", "")) == template_name:
             return item
     return {}
+
+
+func is_system_node_name(template_name: String) -> bool:
+    var entry := get_node_entry(template_name)
+    return str(entry.get("category", "")) == "System"
+
+
+func get_node_create_item(template_name: String) -> Dictionary:
+    var entry := get_node_entry(template_name)
+    if entry.is_empty():
+        return {}
+
+    if not is_system_node_name(template_name):
+        return entry.duplicate(true)
+
+    return _build_system_node_item(entry)
+
+
+func get_level_check_config() -> Dictionary:
+    return level_check_config.duplicate(true)
+
+
+func _build_system_node_item(entry: Dictionary) -> Dictionary:
+    var item := entry.duplicate(true)
+    if str(entry.get("name", "")) != "Check" or level_check_config.is_empty():
+        return item
+
+    if not item.has("attributes") or not item["attributes"] is Dictionary:
+        item["attributes"] = {}
+
+    item["attributes"] = _merge_attributes(item["attributes"], level_check_config)
+    return item
 
 
 func resolve_node_config(item: Dictionary) -> Dictionary:
@@ -141,6 +194,9 @@ func _load_node_list() -> void:
 func _load_level_config() -> void:
     available_nodes.clear()
     current_tasks.clear()
+    current_variables.clear()
+    level_check_config.clear()
+    reset_task_progress()
 
     if not FileAccess.file_exists(LEVEL_LIST_PATH):
         push_error("Level list file not found: %s" % LEVEL_LIST_PATH)
@@ -168,6 +224,14 @@ func _load_level_config() -> void:
 
         for node_name in entry.get("nodes", []):
             available_nodes.append(str(node_name))
+
+        var variables: Variant = entry.get("variables", {})
+        if variables is Dictionary:
+            current_variables = variables.duplicate(true)
+
+        var check_config: Variant = entry.get("check", {})
+        if check_config is Dictionary:
+            level_check_config = check_config.duplicate(true)
 
         var tasks: Variant = entry.get("tasks", [])
         if tasks is Array:

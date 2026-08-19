@@ -1,6 +1,12 @@
 class_name NumberNode
 extends BaseNode
 
+"""
+{
+    "value": 0
+}
+"""
+
 @onready var value_input: SpinBox = $VBoxContainer/SpinBox
 
 

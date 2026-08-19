@@ -20,6 +20,12 @@ func set_run_visible(_is_visible: bool) -> void:
         run_button.visible = _is_visible
 
 
+func set_button_visible(button_name: String, is_visible: bool) -> void:
+    var button := get_node_or_null("HBoxContainer/%s" % button_name) as Button
+    if button:
+        button.visible = is_visible
+
+
 func display_data(data: Variant, data_type: DisplayDialog.DataType = DisplayDialog.DataType.STRING) -> void:
     if display_dialog == null:
         _bind_display_dialog()

@@ -1,6 +1,12 @@
 class_name OperationNode
 extends BaseNode
 
+"""
+{
+    "value": ""
+}
+"""
+
 @onready var value_input: LineEdit = $VBoxContainer/LineEdit
 
 

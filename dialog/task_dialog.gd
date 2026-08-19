@@ -44,14 +44,16 @@ func _build_task_list() -> void:
         child.free()
 
     var task_count := 0
-    for task in GameState.get_current_level_tasks():
+    var tasks := GameState.get_current_level_tasks()
+    for index in tasks.size():
+        var task: Variant = tasks[index]
         if not task is Dictionary:
             continue
 
         task_count += 1
         var item := TASK_ITEM_SCENE.instantiate() as TaskItem
         _task_list.add_child(item)
-        item.setup(task as Dictionary)
+        item.setup(task as Dictionary, GameState.is_task_completed(index))
 
     _task_count.text = "%d 项任务" % task_count
 
