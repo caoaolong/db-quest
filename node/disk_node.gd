@@ -22,7 +22,7 @@ func _sync_controls_from_data() -> void:
 func _update_size_display() -> void:
     var size_bytes := int(data.get("size", 0))
     if size_bytes > 0:
-        set_subtitle("- / %d MB" % int(size_bytes / (1024 * 1024)))
+        set_subtitle("- / %d MB" % int(size_bytes / (1024.0 * 1024.0)))
     else:
         set_subtitle("- / -")
 
@@ -55,7 +55,7 @@ func run(inputs: Dictionary = {}) -> Variant:
         "WRITE":
             return _run_write(disk_path, slot_inputs)
         _:
-            push_warning("Unknown disk operation: %s" % operation)
+            EditorLog.warn("Unknown disk operation: %s" % operation)
             return {
                 "error": "Unknown operation: %s" % operation,
             }

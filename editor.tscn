@@ -81,7 +81,17 @@ text = "Run"
 [node name="GraphEdit" type="GraphEdit" parent="VBoxContainer" unique_id=955933790]
 layout_mode = 2
 size_flags_vertical = 3
+scroll_offset = Vector2(0, -20)
 script = ExtResource("1_wlowb")
+
+[node name="StatusContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1398030426]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+
+[node name="Log" type="Label" parent="VBoxContainer/StatusContainer" unique_id=1989264747]
+layout_mode = 2
+size_flags_horizontal = 3
+text_overrun_behavior = 3
 
 [node name="DisplayDialog" parent="." unique_id=406800570 instance=ExtResource("4_q0a35")]
 visible = false

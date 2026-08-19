@@ -29,9 +29,9 @@ func _fit_task_list_panel() -> void:
     for child in _task_list.get_children():
         if child is not Control:
             continue
-        var min_size := (child as Control).get_combined_minimum_size()
-        content_width = maxf(content_width, min_size.x)
-        content_height += min_size.y
+        var _min_size := (child as Control).get_combined_minimum_size()
+        content_width = maxf(content_width, _min_size.x)
+        content_height += _min_size.y
 
     if child_count > 1:
         content_height += separation * (child_count - 1)

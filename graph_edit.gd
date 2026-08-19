@@ -140,24 +140,24 @@ func compute_execution_order(target: GraphNode) -> Array:
         adjacency[from_name].append(to_name)
         in_degree[to_name] = int(in_degree[to_name]) + 1
 
-    var ready: Array[String] = []
+    var ready_queue: Array[String] = []
     for node_name in closure.keys():
         if int(in_degree[node_name]) == 0:
-            ready.append(node_name)
-    ready.sort()
+            ready_queue.append(node_name)
+    ready_queue.sort()
 
     var order: Array = []
-    while not ready.is_empty():
-        var node_name: String = ready.pop_front()
+    while not ready_queue.is_empty():
+        var node_name: String = ready_queue.pop_front()
         order.append(closure[node_name])
         for next_name in adjacency[node_name]:
             in_degree[next_name] = int(in_degree[next_name]) - 1
             if int(in_degree[next_name]) == 0:
-                ready.append(next_name)
-        ready.sort()
+                ready_queue.append(next_name)
+        ready_queue.sort()
 
     if order.size() != closure.size():
-        push_warning("Graph cycle detected while computing execution order for: %s" % target.name)
+        EditorLog.warn("Graph cycle detected while computing execution order for: %s" % target.name)
         for node_name in closure.keys():
             var graph_node: GraphNode = closure[node_name]
             if not graph_node in order:
@@ -205,10 +205,25 @@ func _get_direct_upstream_nodes(graph_node: GraphNode) -> Array:
     return result
 
 
+func has_disk_node() -> bool:
+    for child in get_children():
+        if not child is GraphNode:
+            continue
+
+        var graph_node := child as GraphNode
+        if graph_node.get_child_count() == 0:
+            continue
+
+        if graph_node.get_child(0) is DiskNode:
+            return true
+
+    return false
+
+
 func create_node_from_config(
     item: Dictionary,
     instance_id: String = "",
-    position: Variant = null,
+    node_position: Variant = null,
     state: Dictionary = {}
 ) -> GraphNode:
     var config := GameState.resolve_node_config(item)
@@ -216,8 +231,13 @@ func create_node_from_config(
         return null
 
     var template_name := str(config.get("name", ""))
+    var node_type := str(config.get("type", ""))
     if not GameState.is_node_available(template_name):
-        push_warning("Node is not available in current level: %s" % template_name)
+        EditorLog.warn("Node is not available in current level: %s" % template_name)
+        return null
+
+    if node_type == "Disk" and has_disk_node():
+        EditorLog.warn("画布中只能存在一个磁盘节点")
         return null
 
     var scene_path := str(config.get("scene", ""))
@@ -255,8 +275,8 @@ func create_node_from_config(
 
     _build_node_rows(node, attributes)
 
-    if position is Vector2:
-        node.position_offset = position
+    if node_position is Vector2:
+        node.position_offset = node_position
     else:
         var graph_node_count := 0
         for child in get_children():
@@ -336,7 +356,7 @@ func load_snapshot() -> void:
             continue
 
         var position_dict: Dictionary = node_data.get("position", {})
-        var position := Vector2(
+        var node_position := Vector2(
             float(position_dict.get("x", 0.0)),
             float(position_dict.get("y", 0.0))
         )
@@ -344,7 +364,7 @@ func load_snapshot() -> void:
         create_node_from_config(
             item,
             str(node_data.get("instance_id", "")),
-            position,
+            node_position,
             state
         )
 
@@ -436,7 +456,7 @@ func _add_row_from_config(node: GraphNode, row: Dictionary) -> void:
 
 func create_node_row(
     node: GraphNode,
-    row_number: int,
+    _row_number: int,
     row_name: String,
     operation: Slot,
     op_list: Array,
@@ -571,7 +591,7 @@ func _parse_operation(op_name: String) -> Slot:
         "DATA":
             return Slot.DATA
         _:
-            push_warning("Unknown operation: %s" % op_name)
+            EditorLog.warn("Unknown operation: %s" % op_name)
             return Slot.OPERATION_CODE
 
 
@@ -594,5 +614,5 @@ func _parse_slot_type(type_name: String) -> SlotType:
         "OUTPUT":
             return SlotType.OUTPUT
         _:
-            push_warning("Unknown slot type: %s" % type_name)
+            EditorLog.warn("Unknown slot type: %s" % type_name)
             return SlotType.OUTPUT

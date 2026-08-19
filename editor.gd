@@ -1,6 +1,7 @@
 extends PanelContainer
 
 @onready var _tab_bar: TabBar = $VBoxContainer/HBoxContainer/VBoxContainer/TabBar
+@onready var _log_label: Label = $VBoxContainer/StatusContainer/Log
 
 var _task_dialog: TaskDialog = null
 
@@ -8,6 +9,28 @@ var _task_dialog: TaskDialog = null
 func _ready() -> void:
     _build_tab_bar()
     _bind_task_dialog()
+    _bind_status_log()
+
+
+func _bind_status_log() -> void:
+    if _log_label == null:
+        return
+
+    _log_label.text = ""
+    EditorLog.message_logged.connect(_on_log_message)
+
+
+func _on_log_message(message: String, level: String) -> void:
+    var prefix := ""
+    match level:
+        EditorLog.LEVEL_WARN:
+            prefix = "[警告] "
+        EditorLog.LEVEL_ERROR:
+            prefix = "[错误] "
+        _:
+            prefix = "[信息] "
+
+    _log_label.text = prefix + message
 
 
 func _on_tasks_pressed() -> void:
