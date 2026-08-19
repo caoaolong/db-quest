@@ -8,7 +8,16 @@
             "Operation",
             "Data"
         ],
-        "tasks": []
+        "tasks": [
+            {
+                "title": "检测大小",
+                "description": "请发送「IDENTIFY」指令检测磁盘大小",
+                "reward": {
+                    "EXP": 1000,
+                    "COIN": 100
+                }
+            }
+        ]
     },
     {
         "level": 2,

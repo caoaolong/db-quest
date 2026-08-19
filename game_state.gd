@@ -7,6 +7,7 @@ const NODE_LIST_PATH := "res://data/node_list.json"
 # 当前的关卡
 var current_level: int = 1
 var available_nodes: Array[String] = []
+var current_tasks: Array = []
 var node_types: Dictionary = {}
 var node_list: Array = []
 var virtual_disk_path: String = ""
@@ -43,6 +44,10 @@ func get_categories() -> Array[String]:
 
 func is_node_available(node_name: String) -> bool:
     return node_name in available_nodes
+
+
+func get_current_level_tasks() -> Array:
+    return current_tasks.duplicate(true)
 
 
 func get_node_entry(template_name: String) -> Dictionary:
@@ -135,6 +140,7 @@ func _load_node_list() -> void:
 
 func _load_level_config() -> void:
     available_nodes.clear()
+    current_tasks.clear()
 
     if not FileAccess.file_exists(LEVEL_LIST_PATH):
         push_error("Level list file not found: %s" % LEVEL_LIST_PATH)
@@ -162,6 +168,10 @@ func _load_level_config() -> void:
 
         for node_name in entry.get("nodes", []):
             available_nodes.append(str(node_name))
+
+        var tasks: Variant = entry.get("tasks", [])
+        if tasks is Array:
+            current_tasks = tasks
         return
 
     push_warning("No node config found for level %d" % current_level)

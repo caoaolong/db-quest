@@ -20,15 +20,15 @@ func set_run_visible(_is_visible: bool) -> void:
         run_button.visible = _is_visible
 
 
-func display_data(data: String) -> void:
+func display_data(data: Variant, data_type: DisplayDialog.DataType = DisplayDialog.DataType.STRING) -> void:
     if display_dialog == null:
         _bind_display_dialog()
     if display_dialog == null:
         push_error("DisplayDialog not found")
         return
 
-    display_dialog.load_data(data)
-    display_dialog.popup()
+    display_dialog.load_data(data, data_type)
+    display_dialog.show_dialog()
 
 
 func _bind_display_dialog() -> void:

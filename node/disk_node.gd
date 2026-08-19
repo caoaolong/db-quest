@@ -8,6 +8,38 @@ extends BaseNode
 
 func _ready() -> void:
     super._ready()
+    _sync_controls_from_data()
+
+
+func _sync_data_from_controls() -> void:
+    pass
+
+
+func _sync_controls_from_data() -> void:
+    _update_size_display()
+
+
+func _update_size_display() -> void:
+    var size_bytes := int(data.get("size", 0))
+    if size_bytes > 0:
+        set_subtitle("- / %d MB" % int(size_bytes / (1024 * 1024)))
+    else:
+        set_subtitle("- / -")
+
+
+func _get_disk_size_bytes() -> int:
+    var size_bytes := int(data.get("size", 0))
+    if size_bytes > 0:
+        return size_bytes
+    return VirtualDisk.get_size_bytes()
+
+
+func _on_display_clicked() -> void:
+    action.display_data({
+        "disk_path": GameState.virtual_disk_path,
+        "total_bytes": _get_disk_size_bytes(),
+        "page_size": VirtualDisk.SECTOR_SIZE,
+    }, DisplayDialog.DataType.BINARY)
 
 
 func run(inputs: Dictionary = {}) -> Variant:
@@ -30,12 +62,14 @@ func run(inputs: Dictionary = {}) -> Variant:
 
 
 func _run_identify() -> Dictionary:
+    var size_bytes := VirtualDisk.get_size_bytes()
     var size_mb := VirtualDisk.get_size_mb()
-    set_subtitle("- / %d MB" % size_mb)
+    data["size"] = size_bytes
+    _update_size_display()
     schedule_save()
     return {
         "operation": "IDENTIFY",
-        "size_bytes": VirtualDisk.get_size_bytes(),
+        "size_bytes": size_bytes,
         "size_mb": size_mb,
     }
 
