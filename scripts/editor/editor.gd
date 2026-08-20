@@ -53,3 +53,7 @@ func _build_tab_bar() -> void:
 
     for category in GameState.get_categories():
         _tab_bar.add_tab(category)
+
+
+func _on_back_pressed() -> void:
+    get_tree().change_scene_to_file("res://scenes/level_list.tscn")

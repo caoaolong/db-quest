@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://b0kmtt1xqmp6c"]
 
-[ext_resource type="Script" uid="uid://dh1aaptej2soq" path="res://graph_edit.gd" id="1_wlowb"]
-[ext_resource type="StyleBox" uid="uid://bhn0kgpjel2s0" path="res://button_bar.tres" id="3_wrb8p"]
-[ext_resource type="Script" uid="uid://d2jni5ucghw8o" path="res://button_bar.gd" id="4_button_bar"]
+[ext_resource type="Script" uid="uid://dh1aaptej2soq" path="res://scripts/editor/graph_edit.gd" id="1_wlowb"]
+[ext_resource type="StyleBox" uid="uid://bhn0kgpjel2s0" path="res://scripts/editor/button_bar.tres" id="3_wrb8p"]
+[ext_resource type="Script" uid="uid://d2jni5ucghw8o" path="res://scripts/editor/button_bar.gd" id="4_button_bar"]
 [ext_resource type="PackedScene" uid="uid://u633aotie483" path="res://dialog/display_dialog.tscn" id="4_q0a35"]
-[ext_resource type="Script" uid="uid://bm6u423ifu2yg" path="res://editor.gd" id="5_editor"]
+[ext_resource type="Script" uid="uid://bm6u423ifu2yg" path="res://scripts/editor/editor.gd" id="5_editor"]
 [ext_resource type="PackedScene" uid="uid://b4qxwukuicjci" path="res://dialog/task_dialog.tscn" id="6_task_dialog"]
 
 [node name="Control" type="PanelContainer" unique_id=728991178]
@@ -63,6 +63,11 @@ custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 text = "Tasks"
 
+[node name="Back" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=1985132121]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+text = "Back"
+
 [node name="Run2" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=802850326]
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
@@ -73,15 +78,9 @@ custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 text = "Run"
 
-[node name="Run4" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=1313103170]
-custom_minimum_size = Vector2(0, 28)
-layout_mode = 2
-text = "Run"
-
 [node name="GraphEdit" type="GraphEdit" parent="VBoxContainer" unique_id=955933790]
 layout_mode = 2
 size_flags_vertical = 3
-scroll_offset = Vector2(0, -20)
 script = ExtResource("1_wlowb")
 
 [node name="StatusContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1398030426]
@@ -100,3 +99,4 @@ visible = false
 visible = false
 
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Tasks" to="." method="_on_tasks_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Back" to="." method="_on_back_pressed"]

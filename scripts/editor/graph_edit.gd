@@ -81,7 +81,7 @@ func _on_disconnection_request(from_node: StringName, from_port: int, to_node: S
 
 
 func run_node(target: GraphNode) -> void:
-    var order := compute_execution_order(target)
+    var order: Array = compute_execution_order(target)
     if order.is_empty():
         order = [target]
 
@@ -90,23 +90,154 @@ func run_node(target: GraphNode) -> void:
 
     for index in order.size():
         var graph_node: GraphNode = order[index]
-        var template_name := str(graph_node.get_meta("template_name", graph_node.name))
-        var content := graph_node.get_child(0)
+        print("[%d] %s (%s)" % [
+            index + 1,
+            graph_node.name,
+            str(graph_node.get_meta("template_name", graph_node.name)),
+        ])
+        _execute_graph_node(graph_node, results)
 
-        print("[%d] %s (%s)" % [index + 1, graph_node.name, template_name])
-        if not content is BaseNode:
-            print("  结果: （未实现 run）")
+
+func run_split_node(target: GraphNode) -> void:
+    var split_content: DataSplitNode = target.get_child(0) as DataSplitNode
+    if split_content == null:
+        run_node(target)
+        return
+
+    var order: Array = compute_execution_order(target)
+    var results: Dictionary = {}
+
+    for graph_node in order:
+        if graph_node == target:
+            break
+        _execute_graph_node(graph_node, results)
+
+    var inputs: Dictionary = _collect_run_inputs(target, results)
+    var source_data: Variant = _first_input_value(inputs)
+    if source_data == null:
+        EditorLog.warn("数据分割：未收到 DATA 输入")
+        return
+
+    var chunks: Array = DataSplitNode.split_data(source_data, split_content.get_chunk_size())
+    if chunks.is_empty():
+        EditorLog.warn("数据分割：无有效数据")
+        return
+
+    EditorLog.info("数据分割：共 %d 块" % chunks.size())
+    for index in chunks.size():
+        EditorLog.info("--- 执行第 %d/%d 块 ---" % [index + 1, chunks.size()])
+        var batch_results: Dictionary = results.duplicate(true)
+        batch_results[String(target.name)] = chunks[index]
+        print("  %s: %s" % [target.name, chunks[index]])
+        _execute_downstream_from(target, batch_results)
+
+
+func _execute_graph_node(graph_node: GraphNode, results: Dictionary) -> Variant:
+    var content: Node = graph_node.get_child(0)
+    if not content is BaseNode:
+        print("  结果: （未实现 run）")
+        return null
+
+    var node: BaseNode = content as BaseNode
+    var inputs: Dictionary = _collect_run_inputs(graph_node, results)
+    var result: Variant = node.run(inputs)
+    results[String(graph_node.name)] = result
+    print("  结果: %s" % result)
+
+    var node_type: String = str(graph_node.get_meta("node_type", ""))
+    if node_type == "Disk":
+        TaskTrigger.handle(TaskTrigger.AFTER_DISK_RUN, self)
+    return result
+
+
+func _execute_downstream_from(source: GraphNode, results: Dictionary) -> void:
+    var closure: Dictionary = _collect_downstream_closure(source)
+    var order: Array = _topological_order_subset(closure)
+    for graph_node in order:
+        if graph_node == source:
+            continue
+        _execute_graph_node(graph_node, results)
+
+
+func _collect_downstream_closure(source: GraphNode) -> Dictionary:
+    var closure: Dictionary = {}
+    var stack: Array[GraphNode] = [source]
+
+    while not stack.is_empty():
+        var node: GraphNode = stack.pop_back()
+        var node_name := String(node.name)
+        if closure.has(node_name):
+            continue
+        closure[node_name] = node
+
+        for downstream in _get_direct_downstream_nodes(node):
+            stack.append(downstream)
+
+    return closure
+
+
+func _get_direct_downstream_nodes(graph_node: GraphNode) -> Array:
+    var result: Array = []
+    var seen: Dictionary = {}
+    var node_name := String(graph_node.name)
+
+    for conn in get_connection_list():
+        var from_name := String(conn.get("from_node", conn.get("from")))
+        if from_name != node_name:
             continue
 
-        var node := content as BaseNode
-        var inputs := _collect_run_inputs(graph_node, results)
-        var result: Variant = node.run(inputs)
-        results[String(graph_node.name)] = result
-        print("  结果: %s" % result)
+        var to_name := String(conn.get("to_node", conn.get("to")))
+        if seen.has(to_name):
+            continue
+        seen[to_name] = true
 
-        var node_type := str(graph_node.get_meta("node_type", ""))
-        if node_type == "Disk":
-            TaskTrigger.handle(TaskTrigger.AFTER_DISK_RUN, self)
+        var to_node := get_node_or_null(NodePath(to_name)) as GraphNode
+        if to_node:
+            result.append(to_node)
+
+    return result
+
+
+func _topological_order_subset(closure: Dictionary) -> Array:
+    var in_degree: Dictionary = {}
+    var adjacency: Dictionary = {}
+    for node_name in closure.keys():
+        in_degree[node_name] = 0
+        adjacency[node_name] = []
+
+    for conn in get_connection_list():
+        var from_name := String(conn.get("from_node", conn.get("from")))
+        var to_name := String(conn.get("to_node", conn.get("to")))
+        if not closure.has(from_name) or not closure.has(to_name):
+            continue
+        adjacency[from_name].append(to_name)
+        in_degree[to_name] = int(in_degree[to_name]) + 1
+
+    var ready_queue: Array[String] = []
+    for node_name in closure.keys():
+        if int(in_degree[node_name]) == 0:
+            ready_queue.append(node_name)
+    ready_queue.sort()
+
+    var order: Array = []
+    while not ready_queue.is_empty():
+        var node_name: String = ready_queue.pop_front()
+        order.append(closure[node_name])
+        for next_name in adjacency[node_name]:
+            in_degree[next_name] = int(in_degree[next_name]) - 1
+            if int(in_degree[next_name]) == 0:
+                ready_queue.append(next_name)
+        ready_queue.sort()
+
+    return order
+
+
+func _first_input_value(inputs: Dictionary) -> Variant:
+    if inputs.is_empty():
+        return null
+    var keys: Array = inputs.keys()
+    keys.sort()
+    return inputs[keys[0]]
 
 
 func _collect_run_inputs(graph_node: GraphNode, results: Dictionary) -> Dictionary:

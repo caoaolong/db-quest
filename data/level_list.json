@@ -6,7 +6,9 @@
             "SATA_HDD",
             "Number",
             "Operation",
-            "Data"
+            "Data",
+            "DataSplit",
+            "DataMerge"
         ],
         "variables": {
             "write_string": "HELLO,DBQUEST!"
@@ -60,7 +62,7 @@
     },
     {
         "level": 2,
-        "name": "磁盘分区",
+        "name": "认识扇区",
         "nodes": []
     },
     {

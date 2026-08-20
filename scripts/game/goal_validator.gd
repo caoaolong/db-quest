@@ -2,7 +2,7 @@ class_name GoalValidator
 extends RefCounted
 
 const OPERATORS := [">=", "<=", "!=", "==", ">", "<"]
-const LevelVariables := preload("res://level_variables.gd")
+const LevelVariables := preload("res://scripts/game/level_variables.gd")
 
 
 static func evaluate_goal(goal: String, graph_edit: GraphEdit, variables: Dictionary = {}) -> bool:

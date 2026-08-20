@@ -36,6 +36,18 @@
         "category": "Tools"
     },
     {
+        "name": "DataSplit",
+        "type": "DataSplit",
+        "label": "Split Data",
+        "category": "Tools"
+    },
+    {
+        "name": "DataMerge",
+        "type": "DataMerge",
+        "label": "Merge Data",
+        "category": "Tools"
+    },
+    {
         "name": "Check",
         "type": "Check",
         "label": "Check",

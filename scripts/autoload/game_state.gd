@@ -57,6 +57,13 @@ func get_current_level_variables() -> Dictionary:
     return current_variables.duplicate(true)
 
 
+func set_current_level(level: int) -> void:
+    if level <= 0:
+        return
+    current_level = level
+    _load_level_config()
+
+
 func is_task_completed(task_index: int) -> bool:
     return task_index in completed_task_indices
 
@@ -65,10 +72,20 @@ func mark_task_completed(task_index: int) -> void:
     if task_index < 0 or task_index in completed_task_indices:
         return
     completed_task_indices.append(task_index)
+    _save_task_progress()
 
 
 func reset_task_progress() -> void:
     completed_task_indices.clear()
+    _save_task_progress()
+
+
+func _load_task_progress() -> void:
+    completed_task_indices = TaskProgress.load(current_level)
+
+
+func _save_task_progress() -> void:
+    TaskProgress.save(current_level, completed_task_indices)
 
 
 func get_node_entry(template_name: String) -> Dictionary:
@@ -96,6 +113,25 @@ func get_node_create_item(template_name: String) -> Dictionary:
 
 func get_level_check_config() -> Dictionary:
     return level_check_config.duplicate(true)
+
+
+func get_level_entries() -> Array:
+    var entries: Array = []
+    var seen_levels: Dictionary = {}
+
+    for entry in _read_level_list():
+        if not entry is Dictionary:
+            continue
+
+        var level_num := int(entry.get("level", 0))
+        if level_num <= 0 or seen_levels.has(level_num):
+            continue
+
+        seen_levels[level_num] = true
+        entries.append(entry.duplicate(true))
+
+    entries.sort_custom(func(a, b): return int(a.get("level", 0)) < int(b.get("level", 0)))
+    return entries
 
 
 func _build_system_node_item(entry: Dictionary) -> Dictionary:
@@ -191,32 +227,36 @@ func _load_node_list() -> void:
     push_error("Unexpected node list JSON format: %s" % NODE_LIST_PATH)
 
 
+func _read_level_list() -> Array:
+    if not FileAccess.file_exists(LEVEL_LIST_PATH):
+        push_error("Level list file not found: %s" % LEVEL_LIST_PATH)
+        return []
+
+    var file := FileAccess.open(LEVEL_LIST_PATH, FileAccess.READ)
+    if file == null:
+        push_error("Failed to open level list: %s" % LEVEL_LIST_PATH)
+        return []
+
+    var parsed = JSON.parse_string(file.get_as_text())
+    if parsed == null:
+        push_error("Failed to parse level list JSON: %s" % LEVEL_LIST_PATH)
+        return []
+
+    if not parsed is Array:
+        push_error("Unexpected level list JSON format: %s" % LEVEL_LIST_PATH)
+        return []
+
+    return parsed
+
+
 func _load_level_config() -> void:
     available_nodes.clear()
     current_tasks.clear()
     current_variables.clear()
     level_check_config.clear()
-    reset_task_progress()
+    _load_task_progress()
 
-    if not FileAccess.file_exists(LEVEL_LIST_PATH):
-        push_error("Level list file not found: %s" % LEVEL_LIST_PATH)
-        return
-
-    var file := FileAccess.open(LEVEL_LIST_PATH, FileAccess.READ)
-    if file == null:
-        push_error("Failed to open level list: %s" % LEVEL_LIST_PATH)
-        return
-
-    var parsed = JSON.parse_string(file.get_as_text())
-    if parsed == null:
-        push_error("Failed to parse level list JSON: %s" % LEVEL_LIST_PATH)
-        return
-
-    if not parsed is Array:
-        push_error("Unexpected level list JSON format: %s" % LEVEL_LIST_PATH)
-        return
-
-    for entry in parsed:
+    for entry in _read_level_list():
         if not entry is Dictionary:
             continue
         if int(entry.get("level", 0)) != current_level:

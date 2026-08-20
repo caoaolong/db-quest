@@ -1,0 +1,35 @@
+[gd_scene format=3 uid="uid://bgxwr0ytswy83"]
+
+[ext_resource type="Script" uid="uid://bhcyxmo3nt06m" path="res://scenes/level_list/level_card.gd" id="1_level_card"]
+
+[node name="LevelCard" type="Button" unique_id=116942105]
+custom_minimum_size = Vector2(160, 100)
+focus_mode = 0
+script = ExtResource("1_level_card")
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=292477112]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=1861127797]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Order" type="Label" parent="CenterContainer/VBoxContainer" unique_id=1830416685]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "第一关"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Name" type="Label" parent="CenterContainer/VBoxContainer" unique_id=228277290]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "认识磁盘"
+horizontal_alignment = 1
+vertical_alignment = 1

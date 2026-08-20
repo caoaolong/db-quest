@@ -15,14 +15,14 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="DBQuest"
-run/main_scene="uid://b0kmtt1xqmp6c"
+run/main_scene="uid://boatynmocvvrx"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
 GameState="*uid://cka67il8n1nsm"
-EditorLog="*res://editor_log.gd"
+EditorLog="*res://scripts/autoload/editor_log.gd"
 
 [display]
 

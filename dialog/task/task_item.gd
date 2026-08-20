@@ -1,7 +1,7 @@
 extends PanelContainer
 class_name TaskItem
 
-const LevelVariables := preload("res://level_variables.gd")
+const LevelVariables := preload("res://scripts/game/level_variables.gd")
 
 @onready var _title: Label = $VBoxContainer/TaskCard/Content/Title
 @onready var _description: Label = $VBoxContainer/TaskCard/Content/Description
