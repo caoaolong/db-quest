@@ -7,12 +7,19 @@ signal help_clicked
 signal run_clicked
 
 var display_dialog: DisplayDialog = null
+var _spend_tween: Tween
 
 @onready var run_button: Button = $HBoxContainer/Run
+@onready var progress_bar: ProgressBar = $ProgressBar
 
 
 func _ready() -> void:
     _bind_display_dialog()
+    if progress_bar:
+        progress_bar.min_value = 0
+        progress_bar.max_value = 100
+        progress_bar.value = 0
+        progress_bar.show_percentage = false
 
 
 func set_run_visible(_is_visible: bool) -> void:
@@ -20,10 +27,35 @@ func set_run_visible(_is_visible: bool) -> void:
         run_button.visible = _is_visible
 
 
-func set_button_visible(button_name: String, is_visible: bool) -> void:
+func set_button_visible(button_name: String, _is_visible: bool) -> void:
     var button := get_node_or_null("HBoxContainer/%s" % button_name) as Button
     if button:
-        button.visible = is_visible
+        button.visible = _is_visible
+
+
+func reset_progress() -> void:
+    if _spend_tween:
+        _spend_tween.kill()
+        _spend_tween = null
+    if progress_bar:
+        progress_bar.value = 0
+
+
+func play_spend(spend_ms: int) -> void:
+    if progress_bar == null:
+        return
+
+    reset_progress()
+    progress_bar.visible = true
+    if spend_ms <= 0:
+        progress_bar.value = 100
+        return
+
+    _spend_tween = create_tween()
+    _spend_tween.tween_property(progress_bar, "value", 100.0, spend_ms / 1000.0).set_trans(Tween.TRANS_LINEAR)
+    await _spend_tween.finished
+    _spend_tween = null
+    progress_bar.value = 100
 
 
 func display_data(data: Variant, data_type: DisplayDialog.DataType = DisplayDialog.DataType.STRING) -> void:

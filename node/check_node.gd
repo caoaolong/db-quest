@@ -21,10 +21,6 @@ func _configure_action_bar() -> void:
     action.set_run_visible(true)
     action.set_button_visible("Delete", false)
 
-    var progress_bar := action.get_node_or_null("ProgressBar") as ProgressBar
-    if progress_bar:
-        progress_bar.visible = false
-
 
 func set_subtitle(_value: String) -> void:
     pass
@@ -73,6 +69,11 @@ func get_check_value(index: int) -> String:
     return ""
 
 
+func clear_run_data() -> void:
+    data["values"] = {}
+    _sync_controls_from_data()
+
+
 func _update_value_display() -> void:
     var graph_node := get_parent() as GraphNode
     if graph_node == null:
@@ -91,12 +92,33 @@ func _update_value_display() -> void:
 
         var row_name := str(label.get_meta("row_name", ""))
         var value_text := str(values.get(str(slot_index), ""))
-        var display_value := value_text if not value_text.is_empty() else "-"
+        var display_value := _status_text(slot_index, value_text)
+        var status_color := _status_color(display_value)
         if row_name.is_empty():
             label.text = display_value
         else:
             label.text = "%s  %s" % [row_name, display_value]
         label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+        label.add_theme_color_override("font_color", status_color)
+
+
+func _status_text(slot_index: int, value_text: String) -> String:
+    if value_text.is_empty():
+        return "-"
+    var graph_edit := get_graph_edit()
+    if graph_edit != null and GoalValidator.evaluate_check_row(graph_edit, slot_index):
+        return "通过"
+    return "未通过"
+
+
+func _status_color(display_value: String) -> Color:
+    match display_value:
+        "通过":
+            return Color(0.45, 0.85, 0.5)
+        "未通过":
+            return Color(0.95, 0.45, 0.45)
+        _:
+            return Color(0.75, 0.75, 0.75)
 
 
 func _get_slot_count() -> int:
@@ -125,4 +147,8 @@ func _normalize_check_value(value: Variant) -> String:
 
 
 func _on_display_clicked() -> void:
-    action.display_data(data.get("values", {}))
+    var values: Dictionary = data.get("values", {})
+    var status := {}
+    for key in values.keys():
+        status[str(key)] = _status_text(int(key), str(values[key]))
+    action.display_data(status)

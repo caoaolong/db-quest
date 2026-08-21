@@ -25,7 +25,7 @@ static func save(level: int, completed_indices: Array[int]) -> void:
     file.close()
 
 
-static func load(level: int) -> Array[int]:
+static func load_progress(level: int) -> Array[int]:
     var path := get_path(level)
     if not FileAccess.file_exists(path):
         return []
@@ -35,7 +35,7 @@ static func load(level: int) -> Array[int]:
         push_error("Failed to open task progress: %s" % path)
         return []
 
-    var parsed = JSON.parse_string(file.get_as_text())
+    var parsed: Variant = JSON.parse_string(file.get_as_text())
     if not parsed is Array:
         push_error("Invalid task progress format: %s" % path)
         return []

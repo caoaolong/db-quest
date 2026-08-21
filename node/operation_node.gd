@@ -29,5 +29,5 @@ func _on_text_changed(_text: String) -> void:
     schedule_save()
 
 
-func run(inputs: Dictionary = {}) -> Variant:
+func run(_inputs: Dictionary = {}) -> Variant:
     return get_user_input()

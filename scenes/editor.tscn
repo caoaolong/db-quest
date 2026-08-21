@@ -68,10 +68,10 @@ custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 text = "Back"
 
-[node name="Run2" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=802850326]
+[node name="Clear" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=802850326]
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
-text = "Run"
+text = "Clear"
 
 [node name="Run3" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=1498294126]
 custom_minimum_size = Vector2(0, 28)
@@ -100,3 +100,4 @@ visible = false
 
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Tasks" to="." method="_on_tasks_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Back" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Clear" to="." method="_on_clear_pressed"]

@@ -2,6 +2,7 @@ extends PanelContainer
 
 @onready var _tab_bar: TabBar = $VBoxContainer/HBoxContainer/VBoxContainer/TabBar
 @onready var _log_label: Label = $VBoxContainer/StatusContainer/Log
+@onready var _graph_edit: GraphEdit = $VBoxContainer/GraphEdit
 
 var _task_dialog: TaskDialog = null
 
@@ -57,3 +58,11 @@ func _build_tab_bar() -> void:
 
 func _on_back_pressed() -> void:
     get_tree().change_scene_to_file("res://scenes/level_list.tscn")
+
+
+func _on_clear_pressed() -> void:
+    if _graph_edit != null and _graph_edit.has_method("clear_run_data"):
+        _graph_edit.clear_run_data()
+    if _log_label:
+        _log_label.text = ""
+    EditorLog.info("已清空运行数据")

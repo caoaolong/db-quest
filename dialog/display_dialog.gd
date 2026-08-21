@@ -93,7 +93,7 @@ func _read_binary_page_data() -> PackedByteArray:
     if start >= _binary_data.size():
         return PackedByteArray()
 
-    return _binary_data.slice(start, mini(_binary_page_size, _binary_data.size() - start))
+    return _binary_data.slice(start, mini(start + _binary_page_size, _binary_data.size()))
 
 
 func _fill_binary_lines(page_data: PackedByteArray) -> int:

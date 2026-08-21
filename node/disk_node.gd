@@ -25,6 +25,11 @@ func _sync_controls_from_data() -> void:
     _update_size_display()
 
 
+func clear_run_data() -> void:
+    data["size"] = 0
+    _update_size_display()
+
+
 func _update_size_display() -> void:
     var size_bytes := int(data.get("size", 0))
     if size_bytes > 0:
@@ -60,6 +65,11 @@ func run(inputs: Dictionary = {}) -> Variant:
             return _run_read(disk_path, slot_inputs)
         "WRITE":
             return _run_write(disk_path, slot_inputs)
+        "":
+            EditorLog.warn("磁盘未收到操作码，请将 Operation 接到 Control Bus")
+            return {
+                "error": "Missing operation",
+            }
         _:
             EditorLog.warn("Unknown disk operation: %s" % operation)
             return {
@@ -80,34 +90,38 @@ func _run_identify() -> Dictionary:
     }
 
 
-func _run_read(disk_path: String, slot_inputs: Dictionary) -> Dictionary:
-    var sector_index := _get_sector_index(slot_inputs.get(3, 0))
-    var sector_data := VirtualDisk.read_sector(disk_path, sector_index)
-    return {
-        "operation": "READ",
-        "sector": sector_index,
-        "data": sector_data,
-        "data_hex": sector_data.hex_encode(),
-    }
+func _run_read(disk_path: String, slot_inputs: Dictionary) -> PackedByteArray:
+    var count := _get_sector_count(slot_inputs.get(4, 1))
+    var base_sector := _get_sector_index(slot_inputs.get(3, 0))
+    var sector_index := base_sector + queue_index * count
+    var length := count * VirtualDisk.SECTOR_SIZE
+    var sector_data := VirtualDisk.read_bytes(disk_path, sector_index * VirtualDisk.SECTOR_SIZE, length)
+    EditorLog.info("磁盘读取扇区 %d 起共 %d 个（%d 字节）" % [
+        sector_index,
+        count,
+        sector_data.size(),
+    ])
+    return sector_data
 
 
-func _run_write(disk_path: String, slot_inputs: Dictionary) -> Dictionary:
-    var sector_index := _get_sector_index(slot_inputs.get(3, 0))
-    var encoded := _encode_sector_data(slot_inputs.get(2))
-    var sector_data: PackedByteArray = encoded["sector"]
-    var success := VirtualDisk.write_sector(disk_path, sector_index, sector_data)
+func _run_write(disk_path: String, slot_inputs: Dictionary) -> PackedByteArray:
+    var count := _get_sector_count(slot_inputs.get(4, 1))
+    var base_sector := _get_sector_index(slot_inputs.get(3, 0))
+    var sector_index := base_sector + queue_index * count
+    var encoded := _encode_write_data(slot_inputs.get(2), count)
+    var sector_data: PackedByteArray = encoded["payload"]
+    EditorLog.info("磁盘写入扇区 %d 起共 %d 个（源 %d 字节）" % [
+        sector_index,
+        count,
+        int(encoded["source_size"]),
+    ])
+    var success := VirtualDisk.write_sectors(disk_path, sector_index, count, sector_data)
     if success:
         var graph_edit := get_graph_edit()
         if graph_edit != null:
             TaskTrigger.handle(TaskTrigger.AFTER_VD_WRITE, graph_edit)
-    return {
-        "operation": "WRITE",
-        "sector": sector_index,
-        "source_bytes": encoded["source_size"],
-        "truncated": encoded["truncated"],
-        "bytes_written": sector_data.size(),
-        "success": success,
-    }
+        return sector_data
+    return PackedByteArray()
 
 
 func _get_slot_inputs(inputs: Dictionary) -> Dictionary:
@@ -135,16 +149,20 @@ func _get_sector_index(value: Variant) -> int:
     return int(str(value))
 
 
-func _encode_sector_data(value: Variant) -> Dictionary:
+func _get_sector_count(value: Variant) -> int:
+    return maxi(1, _get_sector_index(value))
+
+
+func _encode_write_data(value: Variant, count: int) -> Dictionary:
     var source_bytes := _to_byte_array(value)
-    var truncated := source_bytes.size() > VirtualDisk.SECTOR_SIZE
-    var sector := VirtualDisk.clip_to_sector(source_bytes)
+    var length := count * VirtualDisk.SECTOR_SIZE
+    var payload := VirtualDisk.clip_to_length(source_bytes, length)
 
     return {
-        "sector": sector,
+        "payload": payload,
         "source_size": source_bytes.size(),
-        "truncated": truncated,
-        "padded": source_bytes.size() < VirtualDisk.SECTOR_SIZE,
+        "truncated": source_bytes.size() > length,
+        "padded": source_bytes.size() < length,
     }
 
 
@@ -154,5 +172,11 @@ func _to_byte_array(value: Variant) -> PackedByteArray:
 
     if value is PackedByteArray:
         return value
+
+    if value is Array:
+        var bytes := PackedByteArray()
+        for item in value:
+            bytes.append_array(_to_byte_array(item))
+        return bytes
 
     return str(value).to_utf8_buffer()

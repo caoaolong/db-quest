@@ -6,9 +6,7 @@
             "SATA_HDD",
             "Number",
             "Operation",
-            "Data",
-            "DataSplit",
-            "DataMerge"
+            "Data"
         ],
         "variables": {
             "write_string": "HELLO,DBQUEST!"
@@ -63,7 +61,53 @@
     {
         "level": 2,
         "name": "认识扇区",
-        "nodes": []
+        "nodes": [
+            "SATA_HDD",
+            "Number",
+            "Operation",
+            "Data",
+            "DataSplit",
+            "DataMerge"
+        ],
+        "variables": {
+            "write_data": "res://data/700B.txt"
+        },
+        "check": {
+            "slots": [
+                {
+                    "row_number": 1.0,
+                    "row_name": "完整数据校验",
+                    "op_list": [
+                        {
+                            "operation": "DATA",
+                            "type": "INPUT"
+                        }
+                    ]
+                }
+            ]
+        },
+        "tasks": [
+            {
+                "title": "完整写入数据",
+                "description": "请使用「WRITE」指令将数据写入磁盘",
+                "reward": {
+                    "EXP": 1000,
+                    "COIN": 100
+                },
+                "trigger": "after(VD->write)",
+                "goal": "VD[0:] == ${write_data}"
+            },
+            {
+                "title": "完整读取数据",
+                "description": "请使用「READ」将写入的文件完整读取出来",
+                "reward": {
+                    "EXP": 1000,
+                    "COIN": 100
+                },
+                "trigger": "on(Check->input)",
+                "goal": "Check.rows[1] == ${write_data}"
+            }
+        ]
     },
     {
         "level": 2,

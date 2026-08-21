@@ -2,7 +2,6 @@ class_name GoalValidator
 extends RefCounted
 
 const OPERATORS := [">=", "<=", "!=", "==", ">", "<"]
-const LevelVariables := preload("res://scripts/game/level_variables.gd")
 
 
 static func evaluate_goal(goal: String, graph_edit: GraphEdit, variables: Dictionary = {}) -> bool:
@@ -26,6 +25,24 @@ static func evaluate_task(task: Dictionary, graph_edit: GraphEdit, variables: Di
     return evaluate_goal(str(task.get("goal", "")), graph_edit, variables)
 
 
+static func evaluate_check_row(graph_edit: GraphEdit, row_index: int) -> bool:
+    var needle := "Check.rows[%d]" % row_index
+    var variables := GameState.get_current_level_variables()
+    var found := false
+
+    for task in GameState.get_current_level_tasks():
+        if not task is Dictionary:
+            continue
+        var goal := str(task.get("goal", ""))
+        if not goal.contains(needle):
+            continue
+        found = true
+        if not evaluate_goal(goal, graph_edit, variables):
+            return false
+
+    return found
+
+
 static func _split_comparison(expression: String) -> Array:
     for operator in OPERATORS:
         var index := expression.find(operator)
@@ -45,7 +62,7 @@ static func _resolve_operand(operand: String, graph_edit: GraphEdit) -> Variant:
         return ""
 
     if operand.begins_with("\"") and operand.ends_with("\""):
-        return operand.substr(1, operand.length() - 2)
+        return _resolve_literal(operand.substr(1, operand.length() - 2))
 
     if operand.is_valid_int():
         return int(operand)
@@ -55,27 +72,45 @@ static func _resolve_operand(operand: String, graph_edit: GraphEdit) -> Variant:
     if operand == "Disk.size":
         return _resolve_disk_size(graph_edit)
 
-    var vd_index := _parse_vd_operand(operand)
-    if vd_index >= 0:
-        return _resolve_vd_sector(vd_index)
+    var vd_spec := _parse_vd_spec(operand)
+    if not vd_spec.is_empty():
+        if vd_spec.get("open_ended", false):
+            return {
+                "__kind": "vd_range",
+                "start": int(vd_spec.get("start", 0)),
+            }
+        return _resolve_vd_sector(int(vd_spec.get("start", 0)))
 
     var check_row_index := _parse_check_rows_operand(operand)
     if check_row_index >= 0:
         return _resolve_check_row(graph_edit, check_row_index)
 
-    return operand
+    return _resolve_literal(operand)
 
 
-static func _parse_vd_operand(operand: String) -> int:
+## VD[n] 单扇区；VD[n:] 从 n 扇区起按对比数据长度读取。
+static func _parse_vd_spec(operand: String) -> Dictionary:
     if not operand.begins_with("VD["):
-        return -1
+        return {}
     if not operand.ends_with("]"):
-        return -1
+        return {}
 
-    var index_text := operand.substr(3, operand.length() - 4)
+    var index_text := operand.substr(3, operand.length() - 4).strip_edges()
+    if index_text.ends_with(":"):
+        var start_text := index_text.substr(0, index_text.length() - 1).strip_edges()
+        if not start_text.is_valid_int():
+            return {}
+        return {
+            "start": int(start_text),
+            "open_ended": true,
+        }
+
     if not index_text.is_valid_int():
-        return -1
-    return int(index_text)
+        return {}
+    return {
+        "start": int(index_text),
+        "open_ended": false,
+    }
 
 
 static func _parse_check_rows_operand(operand: String) -> int:
@@ -140,9 +175,54 @@ static func _bytes_to_compare_string(data: PackedByteArray) -> String:
     return data.slice(0, end).get_string_from_utf8()
 
 
+static func _resolve_literal(value: String) -> Variant:
+    var path := value.strip_edges()
+    if path.begins_with("res://") or path.begins_with("user://"):
+        if FileAccess.file_exists(path):
+            return FileAccess.get_file_as_string(path)
+    return value
+
+
+static func _is_vd_range(value: Variant) -> bool:
+    return value is Dictionary and str(value.get("__kind", "")) == "vd_range"
+
+
+static func _to_compare_bytes(value: Variant) -> PackedByteArray:
+    if value is PackedByteArray:
+        return value as PackedByteArray
+    return str(value).to_utf8_buffer()
+
+
+static func _compare_vd_range(left: Variant, right: Variant) -> bool:
+    var range_spec: Dictionary = {}
+    var expected: Variant = null
+    if _is_vd_range(left):
+        range_spec = left as Dictionary
+        expected = right
+    else:
+        range_spec = right as Dictionary
+        expected = left
+
+    var expected_bytes := _to_compare_bytes(expected)
+    if expected_bytes.is_empty():
+        return false
+
+    var start_sector := int(range_spec.get("start", 0))
+    var actual := VirtualDisk.read_bytes(
+        GameState.virtual_disk_path,
+        start_sector * VirtualDisk.SECTOR_SIZE,
+        expected_bytes.size()
+    )
+    return actual == expected_bytes
+
+
 static func _compare_values(left: Variant, right: Variant, operator: String) -> bool:
     if operator in ["==", "!="]:
-        var equal := str(left) == str(right)
+        var equal: bool
+        if _is_vd_range(left) or _is_vd_range(right):
+            equal = _compare_vd_range(left, right)
+        else:
+            equal = str(left) == str(right)
         return equal if operator == "==" else not equal
 
     var left_number := _to_number(left)

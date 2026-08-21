@@ -4,12 +4,12 @@ extends GraphNode
 const PORT_SIZE := Vector2(10.0, 10.0)
 
 
-func _draw_port(slot_index: int, position: Vector2i, left: bool, color: Color) -> void:
-    var center := Vector2(position)
+func _draw_port(_slot_index: int, port_position: Vector2i, left: bool, color: Color) -> void:
+    var center := Vector2(port_position)
     var half_width := PORT_SIZE.x * 0.5
     var half_height := PORT_SIZE.y * 0.5
 
-    var points: PackedVector2Array
+    var points := PackedVector2Array()
     if left:
         # 输入端口：三角形角朝内（指向节点内部）
         points = PackedVector2Array([

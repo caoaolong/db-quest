@@ -29,5 +29,5 @@ func _on_value_changed(_value: float) -> void:
     schedule_save()
 
 
-func run(inputs: Dictionary = {}) -> Variant:
+func run(_inputs: Dictionary = {}) -> Variant:
     return get_user_input()

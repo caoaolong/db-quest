@@ -13,7 +13,7 @@ extends BaseNode
 func _ready() -> void:
     super._ready()
     chunk_size_input.min_value = 1
-    chunk_size_input.max_value = 9223372036854775807
+    chunk_size_input.max_value = 1_000_000_000
     chunk_size_input.value_changed.connect(_on_chunk_size_changed)
     if not data.has("chunk_size"):
         chunk_size_input.value = 512
@@ -44,20 +44,55 @@ func _on_chunk_size_changed(_value: float) -> void:
     schedule_save()
 
 
-func _on_run_clicked() -> void:
-    var graph_node := get_parent() as GraphNode
-    var graph_edit := get_graph_edit()
-    if graph_node == null or graph_edit == null:
-        return
-    if graph_edit.has_method("run_split_node"):
-        graph_edit.run_split_node(graph_node)
-
-
 func run(inputs: Dictionary = {}) -> Variant:
     var source: Variant = _first_input_value(inputs)
     if source == null:
-        return []
-    return split_data(source, get_chunk_size())
+        remember_split(PackedByteArray(), [])
+        queue_length = 0
+        set_queue_progress(0, 0)
+        return PackedByteArray()
+
+    var chunks: Array = split_data(source, get_chunk_size())
+    remember_split(source, chunks)
+    queue_length = chunks.size()
+    if chunks.is_empty():
+        EditorLog.warn("数据分割：无有效数据")
+        set_queue_progress(0, 0)
+        return PackedByteArray()
+
+    var index := clampi(queue_index, 0, chunks.size() - 1)
+    var chunk := chunks[index] as PackedByteArray
+    set_queue_progress(index + 1, chunks.size())
+    EditorLog.info("数据分割：投递 %d / %d（%d 字节）" % [index + 1, chunks.size(), chunk.size()])
+    return chunk
+
+
+func remember_split(source: Variant, chunks: Array) -> void:
+    data["source"] = _to_bytes(source)
+    data["chunks"] = chunks
+    schedule_save()
+
+
+func clear_run_data() -> void:
+    data.erase("source")
+    data.erase("chunks")
+    queue_length = 0
+    reset_queue_progress()
+
+
+func _on_display_clicked() -> void:
+    var bytes := _to_bytes(data.get("source", PackedByteArray()))
+    if bytes.is_empty():
+        var chunks: Variant = data.get("chunks", [])
+        if chunks is Array:
+            for chunk in chunks:
+                bytes.append_array(_to_bytes(chunk))
+
+    if bytes.is_empty():
+        EditorLog.warn("数据分割：暂无数据，请先运行")
+        return
+
+    action.display_data(bytes, DisplayDialog.DataType.BINARY)
 
 
 static func split_data(source: Variant, chunk_size: int) -> Array:
@@ -72,7 +107,7 @@ static func split_data(source: Variant, chunk_size: int) -> Array:
     var offset := 0
     while offset < bytes.size():
         var end := mini(offset + chunk_size, bytes.size())
-        chunks.append(bytes.slice(offset, end).get_string_from_utf8())
+        chunks.append(bytes.slice(offset, end))
         offset += chunk_size
     return chunks
 
@@ -80,6 +115,11 @@ static func split_data(source: Variant, chunk_size: int) -> Array:
 static func _to_bytes(source: Variant) -> PackedByteArray:
     if source is PackedByteArray:
         return source
+    if source is Array:
+        var bytes := PackedByteArray()
+        for item in source:
+            bytes.append_array(_to_bytes(item))
+        return bytes
     return str(source).to_utf8_buffer()
 
 

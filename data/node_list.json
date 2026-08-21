@@ -37,20 +37,80 @@
     },
     {
         "name": "DataSplit",
-        "type": "DataSplit",
+        "type": "Queue",
         "label": "Split Data",
-        "category": "Tools"
+        "category": "Tools",
+        "scene": "res://node/data_split_node.tscn",
+        "attributes": {
+            "title": "数据分割",
+            "subtitle": "Split",
+            "slots": [
+                {
+                    "row_number": 1.0,
+                    "row_name": "Data",
+                    "op_list": [
+                        {
+                            "operation": "DATA",
+                            "type": "INPUT"
+                        }
+                    ]
+                },
+                {
+                    "row_number": 2.0,
+                    "row_name": "Chunk",
+                    "op_list": [
+                        {
+                            "operation": "QUEUE",
+                            "type": "OUTPUT"
+                        }
+                    ]
+                }
+            ]
+        }
     },
     {
         "name": "DataMerge",
-        "type": "DataMerge",
+        "type": "Queue",
         "label": "Merge Data",
-        "category": "Tools"
+        "category": "Tools",
+        "scene": "res://node/data_merge_node.tscn",
+        "attributes": {
+            "title": "数据合并",
+            "subtitle": "Merge",
+            "slots": [
+                {
+                    "row_number": 1.0,
+                    "row_name": "Chunk",
+                    "op_list": [
+                        {
+                            "operation": "QUEUE",
+                            "type": "INPUT"
+                        }
+                    ]
+                },
+                {
+                    "row_number": 2.0,
+                    "row_name": "Data",
+                    "op_list": [
+                        {
+                            "operation": "DATA",
+                            "type": "OUTPUT"
+                        }
+                    ]
+                }
+            ]
+        }
     },
     {
         "name": "Check",
         "type": "Check",
         "label": "Check",
+        "category": "System"
+    },
+    {
+        "name": "LoadFile",
+        "type": "LoadFile",
+        "label": "Load File",
         "category": "System"
     }
 ]

@@ -12,6 +12,10 @@ extends PanelContainer
 @export var subtitle: String = ""
 var category: String = ""
 var data: Dictionary = {}
+var spend: int = 0
+var queue_index: int = 0
+var queue_total: int = 1
+var queue_length: int = 0
 
 @onready var action: NodeActionBar = $VBoxContainer/NodeActionBar
 
@@ -29,6 +33,7 @@ func collect_data() -> Dictionary:
 func apply_data(saved: Dictionary) -> void:
     data = saved.duplicate(true)
     _sync_controls_from_data()
+    _sync_queue_progress_label()
 
 
 func collect_persisted_data() -> Dictionary:
@@ -39,6 +44,10 @@ func collect_persisted_data() -> Dictionary:
         if not rows.is_empty():
             result["rows"] = rows
     return result
+
+
+func clear_run_data() -> void:
+    pass
 
 
 func apply_persisted_data(saved: Dictionary) -> void:
@@ -78,6 +87,16 @@ func get_graph_edit() -> GraphEdit:
 
 func run(_inputs: Dictionary = {}) -> Variant:
     return null
+
+
+func get_spend() -> int:
+    return maxi(0, spend)
+
+
+func play_spend() -> void:
+    if action == null:
+        return
+    await action.play_spend(get_spend())
 
 
 func get_user_input() -> Variant:
@@ -130,8 +149,28 @@ func _sync_subtitle_label() -> void:
         label.text = subtitle
 
 
+func set_queue_progress(current: int, total: int) -> void:
+    data["queue_current"] = current
+    data["queue_total"] = total
+    _sync_queue_progress_label()
+
+
+func reset_queue_progress() -> void:
+    data.erase("queue_current")
+    data.erase("queue_total")
+    _sync_queue_progress_label()
+
+
+func _sync_queue_progress_label() -> void:
+    var label := get_node_or_null("VBoxContainer/Queue") as Label
+    if label == null:
+        return
+    label.text = "%d / %d" % [int(data.get("queue_current", 0)), int(data.get("queue_total", 0))]
+
+
 func _ready() -> void:
     _sync_subtitle_label()
+    _sync_queue_progress_label()
     _bind_action_bar()
     _configure_action_bar()
 
@@ -157,6 +196,7 @@ func _on_run_clicked() -> void:
         return
 
     var graph_edit := graph_node.get_parent()
+    # 所有节点共用同一套执行规范：pre → queue → after，只跑自身与上游
     if graph_edit != null and graph_edit.has_method("run_node"):
         graph_edit.run_node(graph_node)
 

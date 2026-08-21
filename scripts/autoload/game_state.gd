@@ -57,6 +57,41 @@ func get_current_level_variables() -> Dictionary:
     return current_variables.duplicate(true)
 
 
+func is_file_variable_value(value: Variant) -> bool:
+    if not value is String:
+        return false
+    var path := (value as String).strip_edges()
+    return path.begins_with("res://") or path.begins_with("user://")
+
+
+func get_file_variables() -> Array:
+    var keys: Array = current_variables.keys()
+    keys.sort()
+
+    var result: Array = []
+    for key in keys:
+        var value: Variant = current_variables[key]
+        if not is_file_variable_value(value):
+            continue
+        result.append({
+            "key": str(key),
+            "path": str(value).strip_edges(),
+        })
+    return result
+
+
+func has_file_variables() -> bool:
+    return not get_file_variables().is_empty()
+
+
+func should_spawn_system_node(template_name: String) -> bool:
+    match template_name:
+        "LoadFile":
+            return has_file_variables()
+        _:
+            return true
+
+
 func set_current_level(level: int) -> void:
     if level <= 0:
         return
@@ -81,7 +116,7 @@ func reset_task_progress() -> void:
 
 
 func _load_task_progress() -> void:
-    completed_task_indices = TaskProgress.load(current_level)
+    completed_task_indices = TaskProgress.load_progress(current_level)
 
 
 func _save_task_progress() -> void:
@@ -136,14 +171,39 @@ func get_level_entries() -> Array:
 
 func _build_system_node_item(entry: Dictionary) -> Dictionary:
     var item := entry.duplicate(true)
-    if str(entry.get("name", "")) != "Check" or level_check_config.is_empty():
-        return item
+    var template_name := str(entry.get("name", ""))
 
     if not item.has("attributes") or not item["attributes"] is Dictionary:
         item["attributes"] = {}
 
-    item["attributes"] = _merge_attributes(item["attributes"], level_check_config)
+    match template_name:
+        "Check":
+            if not level_check_config.is_empty():
+                item["attributes"] = _merge_attributes(item["attributes"], level_check_config)
+        "LoadFile":
+            item["attributes"] = _merge_attributes(item["attributes"], {
+                "slots": _build_load_file_slots(),
+            })
+
     return item
+
+
+func _build_load_file_slots() -> Array:
+    var slots: Array = []
+    var file_vars := get_file_variables()
+    for index in file_vars.size():
+        var file_var: Dictionary = file_vars[index]
+        slots.append({
+            "row_number": float(index + 1),
+            "row_name": str(file_var.get("key", "")),
+            "op_list": [
+                {
+                    "operation": "DATA",
+                    "type": "OUTPUT",
+                }
+            ],
+        })
+    return slots
 
 
 func resolve_node_config(item: Dictionary) -> Dictionary:
@@ -165,14 +225,46 @@ func resolve_node_config(item: Dictionary) -> Dictionary:
         var base_attributes: Dictionary = resolved.get("attributes", {})
         resolved["attributes"] = _merge_attributes(base_attributes, item["attributes"])
 
+    if item.has("spend"):
+        resolved["spend"] = int(item["spend"])
+    elif not resolved.has("spend"):
+        resolved["spend"] = 0
+
     var attributes: Dictionary = resolved.get("attributes", {})
+    if attributes.has("spend"):
+        resolved["spend"] = int(attributes["spend"])
     if not attributes.has("title"):
         var label := str(item.get("label", ""))
         if not label.is_empty():
             attributes["title"] = label
             resolved["attributes"] = attributes
 
+    if type_name == "Queue" and not _slots_have_queue_port(attributes.get("slots", [])):
+        push_error("Queue 节点必须至少包含一个 QUEUE 输入或输出 slot: %s" % resolved.get("name", ""))
+        return {}
+
     return resolved
+
+
+func _slots_have_queue_port(slots: Variant) -> bool:
+    if not slots is Array:
+        return false
+
+    for slot in slots:
+        if not slot is Dictionary:
+            continue
+        var op_list: Variant = slot.get("op_list", [])
+        if not op_list is Array:
+            continue
+        for op in op_list:
+            if not op is Dictionary:
+                continue
+            if str(op.get("operation", "")) != "QUEUE":
+                continue
+            var port_type := str(op.get("type", "")).strip_edges()
+            if port_type == "INPUT" or port_type == "OUTPUT":
+                return true
+    return false
 
 
 func _load_node_types() -> void:
