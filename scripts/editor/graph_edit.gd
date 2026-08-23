@@ -3,7 +3,7 @@ extends GraphEdit
 # 执行规范（任意节点点 Run 都走这三段，只跑目标及其上游）：
 # pre   普通上游，不参与队列投递（LoadFile / Number / Operation / Data 等）
 # queue 队列波次：Queue 类型，或带 QUEUE 口 / 从 QUEUE 取数的节点（Split / Merge / 接队列的 Disk）
-# after 队列收敛之后的下游（Merge 之后的 Check 等）
+# after 队列收敛之后的下游（Merge 之后的节点等）
 
 enum SlotType {
     INPUT,
@@ -27,7 +27,6 @@ const SLOT_COLORS: Dictionary = {
 const node_style = preload("res://node/node_style.tres")
 const ROW_HORIZONTAL_MARGIN := 12
 const SYSTEM_NODE_POSITIONS := {
-    "Check": Vector2(520, 280),
     "LoadFile": Vector2(40, 80),
 }
 
@@ -462,7 +461,7 @@ func create_node_from_config(
     content.offset_right = 0
     content.offset_bottom = 0
     node.add_child(content)
-    if attributes.has("subtitle") and not content is CheckNode:
+    if attributes.has("subtitle"):
         _set_subtitle(content, str(attributes["subtitle"]))
     node.set_slot_enabled_left(0, false)
     node.set_slot_enabled_right(0, false)
@@ -488,6 +487,7 @@ func create_node_from_config(
 
 
 func clear_run_data() -> void:
+    GameState.read_buffer.clear()
     for child in get_children():
         if not child is GraphNode:
             continue
@@ -520,6 +520,7 @@ func restart_graph() -> void:
     _is_restoring = true
     if _save_timer:
         _save_timer.stop()
+    GameState.read_buffer.clear()
     clear_graph()
     _ensure_system_nodes()
     _is_restoring = false
@@ -595,10 +596,16 @@ func load_snapshot() -> void:
         for conn in snapshot.get("connections", []):
             if not conn is Dictionary:
                 continue
+            var from_name := StringName(conn.get("from_node", ""))
+            var to_name := StringName(conn.get("to_node", ""))
+            if get_node_or_null(NodePath(from_name)) == null:
+                continue
+            if get_node_or_null(NodePath(to_name)) == null:
+                continue
             connect_node(
-                StringName(conn.get("from_node", "")),
+                from_name,
                 int(conn.get("from_port", 0)),
-                StringName(conn.get("to_node", "")),
+                to_name,
                 int(conn.get("to_port", 0))
             )
 

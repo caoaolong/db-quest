@@ -13,20 +13,6 @@
         "variables": {
             "write_string": "HELLO,DBQUEST!"
         },
-        "check": {
-            "slots": [
-                {
-                    "row_number": 1.0,
-                    "row_name": "磁盘数据校验",
-                    "op_list": [
-                        {
-                            "operation": "DATA",
-                            "type": "INPUT"
-                        }
-                    ]
-                }
-            ]
-        },
         "tasks": [
             {
                 "title": "检测大小",
@@ -50,13 +36,13 @@
             },
             {
                 "title": "读取扇区",
-                "description": "请使用「READ」将「0」扇区的数据读取到校验器的第「1」行",
+                "description": "请使用「READ」将「0」扇区的数据读出",
                 "reward": {
                     "EXP": 1000,
                     "COIN": 100
                 },
-                "trigger": "on(Check->input)",
-                "goal": "Check.rows[1] == ${write_string}"
+                "trigger": "after(VD->read)",
+                "goal": "RB[0] == ${write_string}"
             }
         ]
     },
@@ -76,20 +62,6 @@
         "files": {
             "data": "res://data/700B.txt"
         },
-        "check": {
-            "slots": [
-                {
-                    "row_number": 1.0,
-                    "row_name": "完整数据校验",
-                    "op_list": [
-                        {
-                            "operation": "DATA",
-                            "type": "INPUT"
-                        }
-                    ]
-                }
-            ]
-        },
         "tasks": [
             {
                 "title": "完整写入数据",
@@ -108,8 +80,8 @@
                     "EXP": 1000,
                     "COIN": 100
                 },
-                "trigger": "on(Check->input)",
-                "goal": "Check.rows[1] == ${files.data}"
+                "trigger": "after(VD->read)",
+                "goal": "RB[0:] == ${files.data}"
             }
         ]
     },
@@ -122,19 +94,34 @@
             "Disk",
             "Number",
             "Operation",
+            "DataSplit",
+            "DataMerge",
             "File",
             "FileAdapter"
         ],
+        "files": {
+            "data": "res://data/6K.txt"
+        },
         "tasks": [
             {
-                "title": "构建GPT分区",
-                "description": "请将磁盘格式化为GPT分区",
+                "title": "写入文件页",
+                "description": "将「data」写入第「0」个文件页",
                 "reward": {
                     "EXP": 10000,
                     "COIN": 100
                 },
                 "trigger": "after(VD->write)",
-                "goal": "VD[0:] == ${write_data}"
+                "goal": "VD[0:] == ${files.data}"
+            },
+            {
+                "title": "读取文件页",
+                "description": "从磁盘读出已写入第「0」个文件页的数据",
+                "reward": {
+                    "EXP": 10000,
+                    "COIN": 100
+                },
+                "trigger": "after(VD->read)",
+                "goal": "RB[0:] == ${files.data}"
             }
         ]
     }

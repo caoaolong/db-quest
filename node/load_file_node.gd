@@ -115,10 +115,10 @@ func _update_file_display() -> void:
 
 
 func _format_slot_text(file_name: String, path: String) -> String:
-    var size := _get_file_size(path)
-    if size < 0:
+    var _size := _get_file_size(path)
+    if _size < 0:
         return file_name
-    return "%s(%s)" % [file_name, _format_bytes(size)]
+    return "%s(%s)" % [file_name, _format_bytes(_size)]
 
 
 func _get_file_size(path: String) -> int:

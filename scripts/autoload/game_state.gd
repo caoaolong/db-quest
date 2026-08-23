@@ -11,11 +11,10 @@ var current_tasks: Array = []
 var current_variables: Dictionary = {}
 var current_files: Dictionary = {}
 var completed_task_indices: Array[int] = []
-var level_check_config: Dictionary = {}
-var has_level_check: bool = false
 var node_list: Array = []
 var virtual_disk_path: String = ""
 var virtual_file_path: String = ""
+var read_buffer: ReadBuffer = ReadBuffer.new()
 
 
 func _ready() -> void:
@@ -87,8 +86,6 @@ func should_spawn_system_node(template_name: String) -> bool:
     match template_name:
         "LoadFile":
             return has_level_files()
-        "Check":
-            return has_level_check
         _:
             return true
 
@@ -147,10 +144,6 @@ func get_node_create_item(template_name: String) -> Dictionary:
     return _build_system_node_item(entry)
 
 
-func get_level_check_config() -> Dictionary:
-    return level_check_config.duplicate(true)
-
-
 func get_level_entries() -> Array:
     var entries: Array = []
     var seen_levels: Dictionary = {}
@@ -178,9 +171,6 @@ func _build_system_node_item(entry: Dictionary) -> Dictionary:
         item["attributes"] = {}
 
     match template_name:
-        "Check":
-            if not level_check_config.is_empty():
-                item["attributes"] = _merge_attributes(item["attributes"], level_check_config)
         "LoadFile":
             item["attributes"] = _merge_attributes(item["attributes"], {
                 "slots": _build_load_file_slots(),
@@ -328,9 +318,8 @@ func _load_level_config() -> void:
     current_tasks.clear()
     current_variables.clear()
     current_files.clear()
-    level_check_config.clear()
-    has_level_check = false
     load_previous = false
+    read_buffer.clear()
     _load_task_progress()
 
     for entry in _read_level_list():
@@ -356,10 +345,6 @@ func _load_level_config() -> void:
                 if file_name.is_empty() or path.is_empty():
                     continue
                 current_files[file_name] = path
-
-        if entry.has("check") and entry["check"] is Dictionary:
-            has_level_check = true
-            level_check_config = (entry["check"] as Dictionary).duplicate(true)
 
         var tasks: Variant = entry.get("tasks", [])
         if tasks is Array:

@@ -101,6 +101,11 @@ func _run_read(disk_path: String, slot_inputs: Dictionary) -> PackedByteArray:
         count,
         sector_data.size(),
     ])
+    if not sector_data.is_empty():
+        GameState.read_buffer.record(sector_index, sector_data)
+        var graph_edit := get_graph_edit()
+        if graph_edit != null:
+            TaskTrigger.handle(TaskTrigger.AFTER_VD_READ, graph_edit)
     return sector_data
 
 

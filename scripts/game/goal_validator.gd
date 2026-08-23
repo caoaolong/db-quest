@@ -25,24 +25,6 @@ static func evaluate_task(task: Dictionary, graph_edit: GraphEdit, variables: Di
     return evaluate_goal(str(task.get("goal", "")), graph_edit, variables)
 
 
-static func evaluate_check_row(graph_edit: GraphEdit, row_index: int) -> bool:
-    var needle := "Check.rows[%d]" % row_index
-    var variables := GameState.get_current_level_variables()
-    var found := false
-
-    for task in GameState.get_current_level_tasks():
-        if not task is Dictionary:
-            continue
-        var goal := str(task.get("goal", ""))
-        if not goal.contains(needle):
-            continue
-        found = true
-        if not evaluate_goal(goal, graph_edit, variables):
-            return false
-
-    return found
-
-
 static func _split_comparison(expression: String) -> Array:
     for operator in OPERATORS:
         var index := expression.find(operator)
@@ -72,25 +54,30 @@ static func _resolve_operand(operand: String, graph_edit: GraphEdit) -> Variant:
     if operand == "Disk.size":
         return _resolve_disk_size(graph_edit)
 
-    var vd_spec := _parse_vd_spec(operand)
-    if not vd_spec.is_empty():
-        if vd_spec.get("open_ended", false):
+    var buffer_spec := _parse_buffer_spec(operand)
+    if not buffer_spec.is_empty():
+        if buffer_spec.get("open_ended", false):
             return {
-                "__kind": "vd_range",
-                "start": int(vd_spec.get("start", 0)),
+                "__kind": "byte_range",
+                "source": str(buffer_spec.get("source", "")),
+                "start": int(buffer_spec.get("start", 0)),
             }
-        return _resolve_vd_sector(int(vd_spec.get("start", 0)))
-
-    var check_row_index := _parse_check_rows_operand(operand)
-    if check_row_index >= 0:
-        return _resolve_check_row(graph_edit, check_row_index)
+        return _resolve_buffer_sector(
+            str(buffer_spec.get("source", "")),
+            int(buffer_spec.get("start", 0))
+        )
 
     return _resolve_literal(operand)
 
 
-## VD[n] 单扇区；VD[n:] 从 n 扇区起按对比数据长度读取。
-static func _parse_vd_spec(operand: String) -> Dictionary:
-    if not operand.begins_with("VD["):
+## VD[n] / RB[n] 单扇区；VD[n:] / RB[n:] 从 n 扇区起按对比数据长度读取。
+static func _parse_buffer_spec(operand: String) -> Dictionary:
+    var source := ""
+    if operand.begins_with("VD["):
+        source = "vd"
+    elif operand.begins_with("RB["):
+        source = "rb"
+    else:
         return {}
     if not operand.ends_with("]"):
         return {}
@@ -101,6 +88,7 @@ static func _parse_vd_spec(operand: String) -> Dictionary:
         if not start_text.is_valid_int():
             return {}
         return {
+            "source": source,
             "start": int(start_text),
             "open_ended": true,
         }
@@ -108,22 +96,10 @@ static func _parse_vd_spec(operand: String) -> Dictionary:
     if not index_text.is_valid_int():
         return {}
     return {
+        "source": source,
         "start": int(index_text),
         "open_ended": false,
     }
-
-
-static func _parse_check_rows_operand(operand: String) -> int:
-    const PREFIX := "Check.rows["
-    if not operand.begins_with(PREFIX):
-        return -1
-    if not operand.ends_with("]"):
-        return -1
-
-    var index_text := operand.substr(PREFIX.length(), operand.length() - PREFIX.length() - 1)
-    if not index_text.is_valid_int():
-        return -1
-    return int(index_text)
 
 
 static func _resolve_disk_size(graph_edit: GraphEdit) -> int:
@@ -133,16 +109,15 @@ static func _resolve_disk_size(graph_edit: GraphEdit) -> int:
     return 0
 
 
-static func _resolve_vd_sector(sector_index: int) -> String:
-    var sector := VirtualDisk.read_sector(GameState.virtual_disk_path, sector_index)
+static func _resolve_buffer_sector(source: String, sector_index: int) -> String:
+    var sector := PackedByteArray()
+    if source == "rb":
+        if not GameState.read_buffer.has_sector(sector_index):
+            return ""
+        sector = GameState.read_buffer.read_sector(sector_index)
+    else:
+        sector = VirtualDisk.read_sector(GameState.virtual_disk_path, sector_index)
     return _bytes_to_compare_string(sector)
-
-
-static func _resolve_check_row(graph_edit: GraphEdit, row_index: int) -> String:
-    var check_node := _find_node_by_type(graph_edit, "Check")
-    if check_node is CheckNode:
-        return (check_node as CheckNode).get_check_value(row_index)
-    return ""
 
 
 static func _find_node_by_type(graph_edit: GraphEdit, node_type: String) -> BaseNode:
@@ -183,8 +158,8 @@ static func _resolve_literal(value: String) -> Variant:
     return value
 
 
-static func _is_vd_range(value: Variant) -> bool:
-    return value is Dictionary and str(value.get("__kind", "")) == "vd_range"
+static func _is_byte_range(value: Variant) -> bool:
+    return value is Dictionary and str(value.get("__kind", "")) == "byte_range"
 
 
 static func _to_compare_bytes(value: Variant) -> PackedByteArray:
@@ -193,10 +168,10 @@ static func _to_compare_bytes(value: Variant) -> PackedByteArray:
     return str(value).to_utf8_buffer()
 
 
-static func _compare_vd_range(left: Variant, right: Variant) -> bool:
+static func _compare_byte_range(left: Variant, right: Variant) -> bool:
     var range_spec: Dictionary = {}
     var expected: Variant = null
-    if _is_vd_range(left):
+    if _is_byte_range(left):
         range_spec = left as Dictionary
         expected = right
     else:
@@ -208,19 +183,26 @@ static func _compare_vd_range(left: Variant, right: Variant) -> bool:
         return false
 
     var start_sector := int(range_spec.get("start", 0))
-    var actual := VirtualDisk.read_bytes(
-        GameState.virtual_disk_path,
-        start_sector * VirtualDisk.SECTOR_SIZE,
-        expected_bytes.size()
-    )
+    var byte_offset := start_sector * VirtualDisk.SECTOR_SIZE
+    var actual := PackedByteArray()
+    if str(range_spec.get("source", "")) == "rb":
+        if not GameState.read_buffer.is_range_covered(byte_offset, expected_bytes.size()):
+            return false
+        actual = GameState.read_buffer.read_bytes(byte_offset, expected_bytes.size())
+    else:
+        actual = VirtualDisk.read_bytes(
+            GameState.virtual_disk_path,
+            byte_offset,
+            expected_bytes.size()
+        )
     return actual == expected_bytes
 
 
 static func _compare_values(left: Variant, right: Variant, operator: String) -> bool:
     if operator in ["==", "!="]:
         var equal: bool
-        if _is_vd_range(left) or _is_vd_range(right):
-            equal = _compare_vd_range(left, right)
+        if _is_byte_range(left) or _is_byte_range(right):
+            equal = _compare_byte_range(left, right)
         else:
             equal = str(left) == str(right)
         return equal if operator == "==" else not equal

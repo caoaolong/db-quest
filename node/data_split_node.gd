@@ -50,7 +50,8 @@ func run(inputs: Dictionary = {}) -> Variant:
         remember_split(PackedByteArray(), [])
         queue_length = 0
         set_queue_progress(0, 0)
-        return PackedByteArray()
+        _update_index_display(0)
+        return _split_outputs(PackedByteArray(), 0)
 
     var chunks: Array = split_data(source, get_chunk_size())
     remember_split(source, chunks)
@@ -58,13 +59,42 @@ func run(inputs: Dictionary = {}) -> Variant:
     if chunks.is_empty():
         EditorLog.warn("数据分割：无有效数据")
         set_queue_progress(0, 0)
-        return PackedByteArray()
+        _update_index_display(0)
+        return _split_outputs(PackedByteArray(), 0)
 
     var index := clampi(queue_index, 0, chunks.size() - 1)
     var chunk := chunks[index] as PackedByteArray
     set_queue_progress(index + 1, chunks.size())
+    _update_index_display(index)
     EditorLog.info("数据分割：投递 %d / %d（%d 字节）" % [index + 1, chunks.size(), chunk.size()])
-    return chunk
+    return _split_outputs(chunk, index)
+
+
+func _split_outputs(chunk: PackedByteArray, index: int) -> Dictionary:
+    return {
+        "__outputs": {
+            "0": chunk,
+            "1": index,
+        },
+    }
+
+
+func _update_index_display(index: int) -> void:
+    var graph_node := get_parent() as GraphNode
+    if graph_node == null:
+        return
+
+    var row_control := _get_row_control(graph_node, 3)
+    if not row_control is Label:
+        return
+
+    var label := row_control as Label
+    if not label.has_meta("row_name"):
+        label.set_meta("row_name", label.text)
+
+    var row_name := str(label.get_meta("row_name", "Index"))
+    label.text = "%s  %d" % [row_name, index]
+    label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 
 
 func remember_split(source: Variant, chunks: Array) -> void:
@@ -78,6 +108,7 @@ func clear_run_data() -> void:
     data.erase("chunks")
     queue_length = 0
     reset_queue_progress()
+    _update_index_display(0)
 
 
 func _on_display_clicked() -> void:

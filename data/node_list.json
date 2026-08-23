@@ -214,6 +214,16 @@
                             "type": "OUTPUT"
                         }
                     ]
+                },
+                {
+                    "row_number": 3.0,
+                    "row_name": "Index",
+                    "op_list": [
+                        {
+                            "operation": "INT",
+                            "type": "OUTPUT"
+                        }
+                    ]
                 }
             ],
             "subtitle": "Split"
@@ -251,19 +261,6 @@
                 }
             ],
             "subtitle": "Merge"
-        }
-    },
-    {
-        "name": "Check",
-        "type": "Check",
-        "label": "Check",
-        "category": "System",
-        "scene": "res://node/check_node.tscn",
-        "unique": true,
-        "spend": 80,
-        "attributes": {
-            "title": "校验器",
-            "slots": []
         }
     },
     {
