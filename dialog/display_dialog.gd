@@ -27,6 +27,7 @@ var _binary_page: int = 0
 var _binary_total_bytes: int = 0
 var _binary_page_size: int = BINARY_PAGE_SIZE
 var _binary_disk_path: String = ""
+var _binary_file_path: String = ""
 var _binary_data: PackedByteArray = PackedByteArray()
 
 
@@ -50,10 +51,14 @@ func _load_binary_data(data: Variant) -> void:
     if data is Dictionary:
         var source := data as Dictionary
         _binary_disk_path = str(source.get("disk_path", ""))
+        _binary_file_path = str(source.get("file_path", ""))
         _binary_total_bytes = int(source.get("total_bytes", 0))
         _binary_page_size = int(source.get("page_size", BINARY_PAGE_SIZE))
         if _binary_total_bytes <= 0:
-            _binary_total_bytes = VirtualDisk.get_size_bytes()
+            if not _binary_file_path.is_empty():
+                _binary_total_bytes = VirtualFile.get_size_bytes()
+            else:
+                _binary_total_bytes = VirtualDisk.get_size_bytes()
     elif data is PackedByteArray:
         _binary_data = data as PackedByteArray
         _binary_total_bytes = _binary_data.size()
@@ -67,6 +72,7 @@ func _load_binary_data(data: Variant) -> void:
 func _reset_binary_state() -> void:
     _binary_page = 0
     _binary_disk_path = ""
+    _binary_file_path = ""
     _binary_data = PackedByteArray()
     _binary_page_size = BINARY_PAGE_SIZE
     _binary_total_bytes = 0
@@ -86,6 +92,12 @@ func _render_binary_page() -> void:
 
 
 func _read_binary_page_data() -> PackedByteArray:
+    if not _binary_file_path.is_empty():
+        return VirtualFile.read_bytes(
+            _binary_file_path,
+            _binary_page * _binary_page_size,
+            _binary_page_size
+        )
     if not _binary_disk_path.is_empty():
         return VirtualDisk.read_sector(_binary_disk_path, _binary_page)
 

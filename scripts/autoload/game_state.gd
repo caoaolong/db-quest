@@ -1,24 +1,26 @@
 extends Node
 
 const LEVEL_LIST_PATH := "res://data/level_list.json"
-const NODE_TYPE_LIST_PATH := "res://data/node_type_list.json"
 const NODE_LIST_PATH := "res://data/node_list.json"
 
 # 当前的关卡
 var current_level: int = 1
+var load_previous: bool = false
 var available_nodes: Array[String] = []
 var current_tasks: Array = []
 var current_variables: Dictionary = {}
+var current_files: Dictionary = {}
 var completed_task_indices: Array[int] = []
 var level_check_config: Dictionary = {}
-var node_types: Dictionary = {}
+var has_level_check: bool = false
 var node_list: Array = []
 var virtual_disk_path: String = ""
+var virtual_file_path: String = ""
 
 
 func _ready() -> void:
     virtual_disk_path = VirtualDisk.ensure_exists()
-    _load_node_types()
+    virtual_file_path = VirtualFile.ensure_exists()
     _load_node_list()
     _load_level_config()
 
@@ -37,6 +39,8 @@ func get_categories() -> Array[String]:
 
         var category := str(item.get("category", ""))
         if category.is_empty() or category == "System" or seen.has(category):
+            continue
+        if not is_node_available(str(item.get("name", ""))):
             continue
 
         seen[category] = true
@@ -57,37 +61,34 @@ func get_current_level_variables() -> Dictionary:
     return current_variables.duplicate(true)
 
 
-func is_file_variable_value(value: Variant) -> bool:
-    if not value is String:
-        return false
-    var path := (value as String).strip_edges()
-    return path.begins_with("res://") or path.begins_with("user://")
+func get_level_files() -> Dictionary:
+    return current_files.duplicate()
 
 
-func get_file_variables() -> Array:
-    var keys: Array = current_variables.keys()
-    keys.sort()
-
-    var result: Array = []
-    for key in keys:
-        var value: Variant = current_variables[key]
-        if not is_file_variable_value(value):
+func get_level_file_entries() -> Array:
+    var entries: Array = []
+    for key in current_files.keys():
+        var file_name := str(key).strip_edges()
+        var path := str(current_files[key]).strip_edges()
+        if file_name.is_empty() or path.is_empty():
             continue
-        result.append({
-            "key": str(key),
-            "path": str(value).strip_edges(),
+        entries.append({
+            "name": file_name,
+            "path": path,
         })
-    return result
+    return entries
 
 
-func has_file_variables() -> bool:
-    return not get_file_variables().is_empty()
+func has_level_files() -> bool:
+    return not get_level_file_entries().is_empty()
 
 
 func should_spawn_system_node(template_name: String) -> bool:
     match template_name:
         "LoadFile":
-            return has_file_variables()
+            return has_level_files()
+        "Check":
+            return has_level_check
         _:
             return true
 
@@ -190,12 +191,12 @@ func _build_system_node_item(entry: Dictionary) -> Dictionary:
 
 func _build_load_file_slots() -> Array:
     var slots: Array = []
-    var file_vars := get_file_variables()
-    for index in file_vars.size():
-        var file_var: Dictionary = file_vars[index]
+    var entries := get_level_file_entries()
+    for index in entries.size():
+        var entry: Dictionary = entries[index]
         slots.append({
             "row_number": float(index + 1),
-            "row_name": str(file_var.get("key", "")),
+            "row_name": str(entry.get("name", "")),
             "op_list": [
                 {
                     "operation": "DATA",
@@ -207,30 +208,29 @@ func _build_load_file_slots() -> Array:
 
 
 func resolve_node_config(item: Dictionary) -> Dictionary:
-    var type_name := str(item.get("type", ""))
-    if not node_types.has(type_name):
-        push_error("Unknown node type: %s" % type_name)
+    if item.is_empty():
         return {}
 
-    var resolved: Dictionary = node_types[type_name].duplicate(true)
+    var resolved: Dictionary = item.duplicate(true)
+    var type_name := str(item.get("type", item.get("name", "")))
     resolved["name"] = str(item.get("name", ""))
     resolved["type"] = type_name
     resolved["label"] = str(item.get("label", ""))
     resolved["category"] = str(item.get("category", ""))
 
-    if item.has("scene"):
-        resolved["scene"] = str(item["scene"])
-
-    if item.has("attributes") and item["attributes"] is Dictionary:
-        var base_attributes: Dictionary = resolved.get("attributes", {})
-        resolved["attributes"] = _merge_attributes(base_attributes, item["attributes"])
+    if str(resolved.get("scene", "")).is_empty():
+        push_error("Node config missing scene path: %s" % resolved.get("name", ""))
+        return {}
 
     if item.has("spend"):
         resolved["spend"] = int(item["spend"])
     elif not resolved.has("spend"):
         resolved["spend"] = 0
 
-    var attributes: Dictionary = resolved.get("attributes", {})
+    if not resolved.has("attributes") or not resolved["attributes"] is Dictionary:
+        resolved["attributes"] = {}
+
+    var attributes: Dictionary = resolved["attributes"]
     if attributes.has("spend"):
         resolved["spend"] = int(attributes["spend"])
     if not attributes.has("title"):
@@ -239,11 +239,17 @@ func resolve_node_config(item: Dictionary) -> Dictionary:
             attributes["title"] = label
             resolved["attributes"] = attributes
 
-    if type_name == "Queue" and not _slots_have_queue_port(attributes.get("slots", [])):
+    if _node_requires_queue_port(resolved) and not _slots_have_queue_port(attributes.get("slots", [])):
         push_error("Queue 节点必须至少包含一个 QUEUE 输入或输出 slot: %s" % resolved.get("name", ""))
         return {}
 
     return resolved
+
+
+func _node_requires_queue_port(resolved: Dictionary) -> bool:
+    var type_name := str(resolved.get("type", ""))
+    var node_name := str(resolved.get("name", ""))
+    return type_name == "Queue" or node_name == "DataSplit" or node_name == "DataMerge"
 
 
 func _slots_have_queue_port(slots: Variant) -> bool:
@@ -265,30 +271,6 @@ func _slots_have_queue_port(slots: Variant) -> bool:
             if port_type == "INPUT" or port_type == "OUTPUT":
                 return true
     return false
-
-
-func _load_node_types() -> void:
-    node_types.clear()
-
-    if not FileAccess.file_exists(NODE_TYPE_LIST_PATH):
-        push_error("Node type list file not found: %s" % NODE_TYPE_LIST_PATH)
-        return
-
-    var file := FileAccess.open(NODE_TYPE_LIST_PATH, FileAccess.READ)
-    if file == null:
-        push_error("Failed to open node type list: %s" % NODE_TYPE_LIST_PATH)
-        return
-
-    var parsed = JSON.parse_string(file.get_as_text())
-    if parsed == null:
-        push_error("Failed to parse node type list JSON: %s" % NODE_TYPE_LIST_PATH)
-        return
-
-    if not parsed is Dictionary:
-        push_error("Unexpected node type list JSON format: %s" % NODE_TYPE_LIST_PATH)
-        return
-
-    node_types = parsed
 
 
 func _load_node_list() -> void:
@@ -345,7 +327,10 @@ func _load_level_config() -> void:
     available_nodes.clear()
     current_tasks.clear()
     current_variables.clear()
+    current_files.clear()
     level_check_config.clear()
+    has_level_check = false
+    load_previous = false
     _load_task_progress()
 
     for entry in _read_level_list():
@@ -354,6 +339,8 @@ func _load_level_config() -> void:
         if int(entry.get("level", 0)) != current_level:
             continue
 
+        load_previous = bool(entry.get("load_previous", false))
+
         for node_name in entry.get("nodes", []):
             available_nodes.append(str(node_name))
 
@@ -361,9 +348,18 @@ func _load_level_config() -> void:
         if variables is Dictionary:
             current_variables = variables.duplicate(true)
 
-        var check_config: Variant = entry.get("check", {})
-        if check_config is Dictionary:
-            level_check_config = check_config.duplicate(true)
+        var files: Variant = entry.get("files", {})
+        if files is Dictionary:
+            for key in files.keys():
+                var file_name := str(key).strip_edges()
+                var path := str(files[key]).strip_edges()
+                if file_name.is_empty() or path.is_empty():
+                    continue
+                current_files[file_name] = path
+
+        if entry.has("check") and entry["check"] is Dictionary:
+            has_level_check = true
+            level_check_config = (entry["check"] as Dictionary).duplicate(true)
 
         var tasks: Variant = entry.get("tasks", [])
         if tasks is Array:

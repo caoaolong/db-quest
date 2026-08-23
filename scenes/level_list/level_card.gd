@@ -10,6 +10,7 @@ const PRESSED_BG_COLOR := Color(0.16, 0.16, 0.16, 1)
 
 @onready var _order: Label = $CenterContainer/VBoxContainer/Order
 @onready var _name: Label = $CenterContainer/VBoxContainer/Name
+@onready var _stars: HBoxContainer = $DifficultyStars
 
 var _level_data: Dictionary = {}
 
@@ -35,6 +36,7 @@ func _ready() -> void:
     mouse_entered.connect(_on_mouse_entered)
     mouse_exited.connect(_on_mouse_exited)
     _set_mouse_filter_ignore($CenterContainer)
+    _set_mouse_filter_ignore($DifficultyStars)
 
     if _level_data.is_empty():
         return
@@ -67,6 +69,32 @@ func _apply_level_data() -> void:
     var level := int(_level_data.get("level", 0))
     _order.text = _format_level_order(level)
     _name.text = str(_level_data.get("name", ""))
+    _apply_difficulty_stars(int(_level_data.get("difficulty", 1)))
+
+
+func _apply_difficulty_stars(difficulty: int) -> void:
+    if _stars == null:
+        return
+
+    difficulty = clampi(difficulty, 1, 5)
+    var template := _stars.get_node_or_null("Star") as TextureRect
+    if template == null:
+        return
+
+    var extras: Array[Node] = []
+    for child in _stars.get_children():
+        if child != template:
+            extras.append(child)
+    for extra in extras:
+        _stars.remove_child(extra)
+        extra.free()
+
+    template.visible = true
+    for index in range(1, difficulty):
+        var star := template.duplicate() as TextureRect
+        star.name = "Star%d" % (index + 1)
+        star.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        _stars.add_child(star)
 
 
 func _on_mouse_entered() -> void:

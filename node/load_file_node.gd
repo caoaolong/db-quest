@@ -62,15 +62,15 @@ func _load_all_files() -> Dictionary:
         data["contents"] = contents
         return outputs
 
-    var file_vars := GameState.get_file_variables()
+    var entries := GameState.get_level_file_entries()
     var output_port := 0
     for slot_index in range(1, graph_node.get_child_count()):
         var file_index := slot_index - 1
-        if file_index >= file_vars.size():
+        if file_index >= entries.size():
             break
 
-        var file_var: Dictionary = file_vars[file_index]
-        var path := str(file_var.get("path", ""))
+        var entry: Dictionary = entries[file_index]
+        var path := str(entry.get("path", "")).strip_edges()
         var bytes := _read_file_bytes(path)
         contents[str(slot_index)] = bytes
         if graph_node.is_slot_enabled_right(slot_index):
@@ -95,32 +95,56 @@ func _update_file_display() -> void:
     if graph_node == null:
         return
 
-    var file_vars := GameState.get_file_variables()
+    var entries := GameState.get_level_file_entries()
     for slot_index in range(1, graph_node.get_child_count()):
         var row_control := _get_row_control(graph_node, slot_index)
         if not row_control is Label:
             continue
 
-        var label := row_control as Label
-        if not label.has_meta("row_name"):
-            label.set_meta("row_name", label.text)
-
-        var row_name := str(label.get_meta("row_name", ""))
         var file_index := slot_index - 1
-        var suffix := ""
-        if file_index < file_vars.size():
-            var path := str(file_vars[file_index].get("path", ""))
-            var file_name := path.get_file()
-            if not file_name.is_empty():
-                suffix = file_name
+        if file_index >= entries.size():
+            break
 
-        if suffix.is_empty():
-            label.text = row_name
-        elif row_name.is_empty() or row_name == suffix:
-            label.text = suffix
-        else:
-            label.text = "%s  %s" % [row_name, suffix]
+        var entry: Dictionary = entries[file_index]
+        var file_name := str(entry.get("name", ""))
+        var path := str(entry.get("path", "")).strip_edges()
+        var label := row_control as Label
+        label.set_meta("row_name", file_name)
+        label.text = _format_slot_text(file_name, path)
         label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+
+
+func _format_slot_text(file_name: String, path: String) -> String:
+    var size := _get_file_size(path)
+    if size < 0:
+        return file_name
+    return "%s(%s)" % [file_name, _format_bytes(size)]
+
+
+func _get_file_size(path: String) -> int:
+    if path.is_empty() or not FileAccess.file_exists(path):
+        return -1
+    var file := FileAccess.open(path, FileAccess.READ)
+    if file == null:
+        return -1
+    return int(file.get_length())
+
+
+func _format_bytes(byte_count: int) -> String:
+    byte_count = maxi(byte_count, 0)
+    const UNITS := ["B", "KB", "MB", "GB"]
+    var value := float(byte_count)
+    var unit_index := 0
+
+    while value >= 1024.0 and unit_index < UNITS.size() - 1:
+        value /= 1024.0
+        unit_index += 1
+
+    if unit_index == 0:
+        return "%d B" % byte_count
+    if is_equal_approx(value, round(value)):
+        return "%d %s" % [int(round(value)), UNITS[unit_index]]
+    return "%.1f %s" % [value, UNITS[unit_index]]
 
 
 func _on_display_clicked() -> void:

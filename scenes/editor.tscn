@@ -73,10 +73,10 @@ custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 text = "Clear"
 
-[node name="Run3" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=1498294126]
+[node name="Restart" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=1498294126]
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
-text = "Run"
+text = "Restart"
 
 [node name="GraphEdit" type="GraphEdit" parent="VBoxContainer" unique_id=955933790]
 layout_mode = 2
@@ -101,3 +101,4 @@ visible = false
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Tasks" to="." method="_on_tasks_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Back" to="." method="_on_back_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Clear" to="." method="_on_clear_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Restart" to="." method="_on_restart_pressed"]

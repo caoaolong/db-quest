@@ -66,3 +66,12 @@ func _on_clear_pressed() -> void:
     if _log_label:
         _log_label.text = ""
     EditorLog.info("已清空运行数据")
+
+
+func _on_restart_pressed() -> void:
+    if _graph_edit != null and _graph_edit.has_method("restart_graph"):
+        _graph_edit.restart_graph()
+    GameState.reset_task_progress()
+    if _log_label:
+        _log_label.text = ""
+    EditorLog.info("已重新开始本关卡")

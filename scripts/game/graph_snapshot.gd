@@ -43,40 +43,22 @@ static func load_snapshot(level: int) -> Dictionary:
     return {}
 
 
-## 本关没有自己的图（或只有系统节点）时，复制上一关快照作为初始结构。
+## 本关尚无快照，且关卡配置 load_previous 为 true 时，复制上一关快照作为初始结构。
 static func load_or_inherit(level: int) -> Dictionary:
-    if level <= 1:
+    if exists(level):
         return GraphSnapshot.load_snapshot(level)
 
-    var current := GraphSnapshot.load_snapshot(level)
-    if _has_user_nodes(current):
-        return current
+    if not GameState.load_previous or level <= 1:
+        return {}
 
     var previous := GraphSnapshot.load_snapshot(level - 1)
     if previous.is_empty():
-        return current
+        return {}
 
     var inherited := previous.duplicate(true)
     inherited["level"] = level
     save(level, inherited)
     return inherited
-
-
-static func _has_user_nodes(snapshot: Dictionary) -> bool:
-    if snapshot.is_empty():
-        return false
-
-    for node_data in snapshot.get("nodes", []):
-        if not node_data is Dictionary:
-            continue
-        var template_name := str(node_data.get("template_name", ""))
-        if template_name.is_empty():
-            continue
-        if GameState.is_system_node_name(template_name):
-            continue
-        return true
-
-    return false
 
 
 static func _ensure_dir() -> void:

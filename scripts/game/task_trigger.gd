@@ -3,6 +3,8 @@ extends RefCounted
 
 const AFTER_DISK_RUN := "after(Disk->run)"
 const AFTER_VD_WRITE := "after(VD->write)"
+const AFTER_FILE_RUN := "after(File->run)"
+const AFTER_VF_WRITE := "after(VF->write)"
 const ON_CHECK_INPUT := "on(Check->input)"
 
 

@@ -2,8 +2,10 @@
     {
         "level": 1,
         "name": "认识磁盘",
+        "load_previous": false,
+        "difficulty": 1,
         "nodes": [
-            "SATA_HDD",
+            "Disk",
             "Number",
             "Operation",
             "Data"
@@ -61,16 +63,18 @@
     {
         "level": 2,
         "name": "认识扇区",
+        "load_previous": true,
+        "difficulty": 2,
         "nodes": [
-            "SATA_HDD",
+            "Disk",
             "Number",
             "Operation",
             "Data",
             "DataSplit",
             "DataMerge"
         ],
-        "variables": {
-            "write_data": "res://data/700B.txt"
+        "files": {
+            "data": "res://data/700B.txt"
         },
         "check": {
             "slots": [
@@ -95,7 +99,7 @@
                     "COIN": 100
                 },
                 "trigger": "after(VD->write)",
-                "goal": "VD[0:] == ${write_data}"
+                "goal": "VD[0:] == ${files.data}"
             },
             {
                 "title": "完整读取数据",
@@ -105,13 +109,33 @@
                     "COIN": 100
                 },
                 "trigger": "on(Check->input)",
-                "goal": "Check.rows[1] == ${write_data}"
+                "goal": "Check.rows[1] == ${files.data}"
             }
         ]
     },
     {
-        "level": 2,
-        "name": "磁盘分区",
-        "nodes": []
+        "level": 3,
+        "name": "数据库文件",
+        "load_previous": false,
+        "difficulty": 3,
+        "nodes": [
+            "Disk",
+            "Number",
+            "Operation",
+            "File",
+            "FileAdapter"
+        ],
+        "tasks": [
+            {
+                "title": "构建GPT分区",
+                "description": "请将磁盘格式化为GPT分区",
+                "reward": {
+                    "EXP": 10000,
+                    "COIN": 100
+                },
+                "trigger": "after(VD->write)",
+                "goal": "VD[0:] == ${write_data}"
+            }
+        ]
     }
 ]

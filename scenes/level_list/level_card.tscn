@@ -1,11 +1,31 @@
 [gd_scene format=3 uid="uid://bgxwr0ytswy83"]
 
 [ext_resource type="Script" uid="uid://bhcyxmo3nt06m" path="res://scenes/level_list/level_card.gd" id="1_level_card"]
+[ext_resource type="Texture2D" uid="uid://gns2rbep15ku" path="res://assets/icons/star.svg" id="2_tsm2a"]
 
 [node name="LevelCard" type="Button" unique_id=116942105]
 custom_minimum_size = Vector2(160, 100)
 focus_mode = 0
 script = ExtResource("1_level_card")
+
+[node name="DifficultyStars" type="HBoxContainer" parent="." unique_id=1620294198]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -23.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+alignment = 1
+
+[node name="Star" type="TextureRect" parent="DifficultyStars" unique_id=2055285091]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("2_tsm2a")
+expand_mode = 1
 
 [node name="CenterContainer" type="CenterContainer" parent="." unique_id=292477112]
 layout_mode = 1
@@ -15,6 +35,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="CenterContainer" unique_id=269317980]
+layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=1861127797]
 layout_mode = 2

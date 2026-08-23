@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://node/file_node.gd" id="1_file"]
+[ext_resource type="PackedScene" uid="uid://diupwx6dksdpq" path="res://node/node_action_bar.tscn" id="2_action_bar"]
+
+[node name="FileNode" type="PanelContainer"]
+custom_minimum_size = Vector2(180, 0)
+offset_right = 180.0
+offset_bottom = 120.0
+script = ExtResource("1_file")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="NodeActionBar" parent="VBoxContainer" instance=ExtResource("2_action_bar")]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="ProgressBar" type="ProgressBar" parent="VBoxContainer"]
+layout_mode = 2

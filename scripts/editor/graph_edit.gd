@@ -50,6 +50,7 @@ func _ready() -> void:
     add_child(_save_timer)
 
     add_valid_connection_type(Slot.QUEUE, Slot.DATA)
+    add_valid_connection_type(Slot.DATA, Slot.QUEUE)
 
     call_deferred("load_snapshot")
 
@@ -89,7 +90,7 @@ func _on_connection_request(from_node: StringName, from_port: int, to_node: Stri
         return
     var from_type := from_graph_node.get_output_port_type(from_port)
     var to_type := to_graph_node.get_input_port_type(to_port)
-    if from_type != to_type and (from_type != int(Slot.QUEUE) or to_type != int(Slot.DATA)):
+    if from_type != to_type and not is_valid_connection_type(from_type, to_type):
         return
 
     connect_node(from_node, from_port, to_node, to_port)
@@ -513,6 +514,16 @@ func clear_graph() -> void:
         if child is GraphNode:
             remove_child(child)
             child.queue_free()
+
+
+func restart_graph() -> void:
+    _is_restoring = true
+    if _save_timer:
+        _save_timer.stop()
+    clear_graph()
+    _ensure_system_nodes()
+    _is_restoring = false
+    _save_snapshot()
 
 
 func export_snapshot() -> Dictionary:

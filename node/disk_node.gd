@@ -105,17 +105,22 @@ func _run_read(disk_path: String, slot_inputs: Dictionary) -> PackedByteArray:
 
 
 func _run_write(disk_path: String, slot_inputs: Dictionary) -> PackedByteArray:
-    var count := _get_sector_count(slot_inputs.get(4, 1))
+    var source_bytes := _to_byte_array(slot_inputs.get(2))
+    var requested_count := _get_sector_count(slot_inputs.get(4, 1))
     var base_sector := _get_sector_index(slot_inputs.get(3, 0))
-    var sector_index := base_sector + queue_index * count
-    var encoded := _encode_write_data(slot_inputs.get(2), count)
+    # 队列波次里每一包是一块数据：按实际占用扇区推进地址，避免 Count=2 时写成 0、2 而跳过 1。
+    var write_count := requested_count
+    if _is_queue_io():
+        write_count = _sector_count_for_payload(source_bytes.size())
+    var sector_index := base_sector + queue_index * write_count
+    var encoded := _encode_write_data(source_bytes, write_count)
     var sector_data: PackedByteArray = encoded["payload"]
     EditorLog.info("磁盘写入扇区 %d 起共 %d 个（源 %d 字节）" % [
         sector_index,
-        count,
+        write_count,
         int(encoded["source_size"]),
     ])
-    var success := VirtualDisk.write_sectors(disk_path, sector_index, count, sector_data)
+    var success := VirtualDisk.write_sectors(disk_path, sector_index, write_count, sector_data)
     if success:
         var graph_edit := get_graph_edit()
         if graph_edit != null:
@@ -153,8 +158,17 @@ func _get_sector_count(value: Variant) -> int:
     return maxi(1, _get_sector_index(value))
 
 
-func _encode_write_data(value: Variant, count: int) -> Dictionary:
-    var source_bytes := _to_byte_array(value)
+func _is_queue_io() -> bool:
+    return queue_total > 1 or queue_index > 0
+
+
+func _sector_count_for_payload(byte_count: int) -> int:
+    if byte_count <= 0:
+        return 1
+    return ceili(byte_count / float(VirtualDisk.SECTOR_SIZE))
+
+
+func _encode_write_data(source_bytes: PackedByteArray, count: int) -> Dictionary:
     var length := count * VirtualDisk.SECTOR_SIZE
     var payload := VirtualDisk.clip_to_length(source_bytes, length)
 
