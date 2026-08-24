@@ -115,30 +115,6 @@
         }
     },
     {
-        "name": "Data",
-        "type": "Data",
-        "label": "Load Data",
-        "category": "Tools",
-        "scene": "res://node/data_node.tscn",
-        "spend": 50,
-        "attributes": {
-            "title": "数据节点",
-            "subtitle": "512 Bytes",
-            "slots": [
-                {
-                    "row_number": 1.0,
-                    "row_name": "Data",
-                    "op_list": [
-                        {
-                            "operation": "DATA",
-                            "type": "OUTPUT"
-                        }
-                    ]
-                }
-            ]
-        }
-    },
-    {
         "name": "Number",
         "type": "Number",
         "label": "Load Number",
@@ -210,7 +186,7 @@
                     "row_name": "Chunk",
                     "op_list": [
                         {
-                            "operation": "QUEUE",
+                            "operation": "DATA",
                             "type": "OUTPUT"
                         }
                     ]

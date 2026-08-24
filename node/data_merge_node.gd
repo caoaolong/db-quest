@@ -8,12 +8,6 @@ extends BaseNode
 """
 
 
-func _configure_action_bar() -> void:
-    if action == null:
-        return
-    action.set_run_visible(true)
-
-
 func _sync_data_from_controls() -> void:
     pass
 

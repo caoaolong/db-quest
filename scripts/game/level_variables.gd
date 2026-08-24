@@ -2,32 +2,16 @@ class_name LevelVariables
 extends RefCounted
 
 
-static func expand_text(text: String, variables: Dictionary = {}) -> String:
+static func expand_text(text: String) -> String:
     if text.is_empty():
         return text
-
-    var result := _expand_file_placeholders(text, false)
-    for key in variables.keys():
-        result = result.replace("${%s}" % key, str(variables[key]))
-    return result
+    return _expand_file_placeholders(text, false)
 
 
-static func expand_goal(goal: String, variables: Dictionary = {}) -> String:
+static func expand_goal(goal: String) -> String:
     if goal.is_empty():
         return goal
-
-    var result := _expand_file_placeholders(goal, true)
-    for key in variables.keys():
-        result = result.replace("${%s}" % key, _format_goal_literal(variables[key]))
-    return result
-
-
-static func expand_text_for_current_level(text: String) -> String:
-    return expand_text(text, GameState.get_current_level_variables())
-
-
-static func expand_goal_for_current_level(goal: String) -> String:
-    return expand_goal(goal, GameState.get_current_level_variables())
+    return _expand_file_placeholders(goal, true)
 
 
 static func _expand_file_placeholders(text: String, as_goal_literal: bool) -> String:

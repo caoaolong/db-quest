@@ -7,11 +7,10 @@
         "nodes": [
             "Disk",
             "Number",
-            "Operation",
-            "Data"
+            "Operation"
         ],
-        "variables": {
-            "write_string": "HELLO,DBQUEST!"
+        "files": {
+            "data": "res://data/128B.txt"
         },
         "tasks": [
             {
@@ -26,13 +25,13 @@
             },
             {
                 "title": "写入扇区",
-                "description": "请使用「WRITE」指令在「0」扇区写入数据「${write_string}」",
+                "description": "请使用「WRITE」指令在「0」扇区写入数据「${files.data}」",
                 "reward": {
                     "EXP": 1000,
                     "COIN": 100
                 },
                 "trigger": "after(VD->write)",
-                "goal": "VD[0] == ${write_string}"
+                "goal": "VD[0] == ${files.data}"
             },
             {
                 "title": "读取扇区",
@@ -42,7 +41,7 @@
                     "COIN": 100
                 },
                 "trigger": "after(VD->read)",
-                "goal": "RB[0] == ${write_string}"
+                "goal": "RB[0] == ${files.data}"
             }
         ]
     },
@@ -55,7 +54,6 @@
             "Disk",
             "Number",
             "Operation",
-            "Data",
             "DataSplit",
             "DataMerge"
         ],

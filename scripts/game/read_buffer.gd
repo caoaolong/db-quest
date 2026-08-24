@@ -34,8 +34,8 @@ func is_range_covered(byte_offset: int, length: int) -> bool:
     if byte_offset < 0 or length <= 0:
         return false
 
-    var start_sector := int(byte_offset / VirtualDisk.SECTOR_SIZE)
-    var end_sector := int((byte_offset + length - 1) / VirtualDisk.SECTOR_SIZE)
+    var start_sector := floori(float(byte_offset) / float(VirtualDisk.SECTOR_SIZE))
+    var end_sector := floori(float(byte_offset + length - 1) / float(VirtualDisk.SECTOR_SIZE))
     for sector_index in range(start_sector, end_sector + 1):
         if not _sectors.has(sector_index):
             return false
@@ -57,7 +57,7 @@ func read_bytes(byte_offset: int, length: int) -> PackedByteArray:
     var copied := 0
     while copied < length:
         var abs_offset := byte_offset + copied
-        var sector_index := int(abs_offset / VirtualDisk.SECTOR_SIZE)
+        var sector_index := floori(float(abs_offset) / float(VirtualDisk.SECTOR_SIZE))
         var within := abs_offset % VirtualDisk.SECTOR_SIZE
         var sector: PackedByteArray = _sectors[sector_index]
         var take := mini(VirtualDisk.SECTOR_SIZE - within, length - copied)

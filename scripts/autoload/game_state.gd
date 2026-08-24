@@ -8,7 +8,6 @@ var current_level: int = 1
 var load_previous: bool = false
 var available_nodes: Array[String] = []
 var current_tasks: Array = []
-var current_variables: Dictionary = {}
 var current_files: Dictionary = {}
 var completed_task_indices: Array[int] = []
 var node_list: Array = []
@@ -54,10 +53,6 @@ func is_node_available(node_name: String) -> bool:
 
 func get_current_level_tasks() -> Array:
     return current_tasks.duplicate(true)
-
-
-func get_current_level_variables() -> Dictionary:
-    return current_variables.duplicate(true)
 
 
 func get_level_files() -> Dictionary:
@@ -239,7 +234,7 @@ func resolve_node_config(item: Dictionary) -> Dictionary:
 func _node_requires_queue_port(resolved: Dictionary) -> bool:
     var type_name := str(resolved.get("type", ""))
     var node_name := str(resolved.get("name", ""))
-    return type_name == "Queue" or node_name == "DataSplit" or node_name == "DataMerge"
+    return type_name == "Queue" or node_name == "DataMerge"
 
 
 func _slots_have_queue_port(slots: Variant) -> bool:
@@ -316,7 +311,6 @@ func _read_level_list() -> Array:
 func _load_level_config() -> void:
     available_nodes.clear()
     current_tasks.clear()
-    current_variables.clear()
     current_files.clear()
     load_previous = false
     read_buffer.clear()
@@ -332,10 +326,6 @@ func _load_level_config() -> void:
 
         for node_name in entry.get("nodes", []):
             available_nodes.append(str(node_name))
-
-        var variables: Variant = entry.get("variables", {})
-        if variables is Dictionary:
-            current_variables = variables.duplicate(true)
 
         var files: Variant = entry.get("files", {})
         if files is Dictionary:

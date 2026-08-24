@@ -4,8 +4,8 @@ extends RefCounted
 const OPERATORS := [">=", "<=", "!=", "==", ">", "<"]
 
 
-static func evaluate_goal(goal: String, graph_edit: GraphEdit, variables: Dictionary = {}) -> bool:
-    var expression: String = LevelVariables.expand_goal(goal.strip_edges(), variables)
+static func evaluate_goal(goal: String, graph_edit: GraphEdit) -> bool:
+    var expression: String = LevelVariables.expand_goal(goal.strip_edges())
     if expression.is_empty():
         return false
 
@@ -19,10 +19,10 @@ static func evaluate_goal(goal: String, graph_edit: GraphEdit, variables: Dictio
     return _compare_values(left_value, right_value, str(parts[2]))
 
 
-static func evaluate_task(task: Dictionary, graph_edit: GraphEdit, variables: Dictionary = {}) -> bool:
+static func evaluate_task(task: Dictionary, graph_edit: GraphEdit) -> bool:
     if not task is Dictionary:
         return false
-    return evaluate_goal(str(task.get("goal", "")), graph_edit, variables)
+    return evaluate_goal(str(task.get("goal", "")), graph_edit)
 
 
 static func _split_comparison(expression: String) -> Array:

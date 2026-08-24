@@ -2,6 +2,7 @@ extends PanelContainer
 
 @onready var _tab_bar: TabBar = $VBoxContainer/HBoxContainer/VBoxContainer/TabBar
 @onready var _log_label: Label = $VBoxContainer/StatusContainer/Log
+@onready var _spend_label: Label = $VBoxContainer/StatusContainer/Spend
 @onready var _graph_edit: GraphEdit = $VBoxContainer/GraphEdit
 
 var _task_dialog: TaskDialog = null
@@ -11,6 +12,7 @@ func _ready() -> void:
     _build_tab_bar()
     _bind_task_dialog()
     _bind_status_log()
+    _bind_run_spend()
 
 
 func _bind_status_log() -> void:
@@ -19,6 +21,20 @@ func _bind_status_log() -> void:
 
     _log_label.text = ""
     EditorLog.message_logged.connect(_on_log_message)
+
+
+func _bind_run_spend() -> void:
+    _update_spend_label(0)
+    if _graph_edit == null:
+        return
+    if _graph_edit.has_signal("run_spend_changed"):
+        _graph_edit.run_spend_changed.connect(_update_spend_label)
+
+
+func _update_spend_label(total_ms: int) -> void:
+    if _spend_label == null:
+        return
+    _spend_label.text = "耗时 %d ms" % maxi(0, total_ms)
 
 
 func _on_log_message(message: String, level: String) -> void:
@@ -60,18 +76,18 @@ func _on_back_pressed() -> void:
     get_tree().change_scene_to_file("res://scenes/level_list.tscn")
 
 
-func _on_clear_pressed() -> void:
-    if _graph_edit != null and _graph_edit.has_method("clear_run_data"):
-        _graph_edit.clear_run_data()
-    if _log_label:
-        _log_label.text = ""
-    EditorLog.info("已清空运行数据")
-
-
 func _on_restart_pressed() -> void:
     if _graph_edit != null and _graph_edit.has_method("restart_graph"):
         _graph_edit.restart_graph()
     GameState.reset_task_progress()
     if _log_label:
         _log_label.text = ""
+    _update_spend_label(0)
     EditorLog.info("已重新开始本关卡")
+
+
+func _on_button_pressed() -> void:
+    if _graph_edit == null:
+        return
+    if _graph_edit.has_method("run_all"):
+        await _graph_edit.run_all()

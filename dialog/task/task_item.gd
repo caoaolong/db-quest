@@ -34,9 +34,8 @@ func _ready() -> void:
 
 
 func _apply_task_data() -> void:
-    var variables := GameState.get_current_level_variables()
-    _title.text = LevelVariables.expand_text(str(_task_data.get("title", "")), variables)
-    _description.text = LevelVariables.expand_text(str(_task_data.get("description", "")), variables)
+    _title.text = LevelVariables.expand_text(str(_task_data.get("title", "")))
+    _description.text = LevelVariables.expand_text(str(_task_data.get("description", "")))
     _status.text = "[已完成]" if _completed else "[未完成]"
     _claim_button.disabled = not _completed
 

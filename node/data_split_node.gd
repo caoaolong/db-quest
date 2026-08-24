@@ -19,12 +19,6 @@ func _ready() -> void:
         chunk_size_input.value = 512
 
 
-func _configure_action_bar() -> void:
-    if action == null:
-        return
-    action.set_run_visible(true)
-
-
 func _sync_data_from_controls() -> void:
     data["chunk_size"] = int(chunk_size_input.value)
 

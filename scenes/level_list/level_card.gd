@@ -11,6 +11,7 @@ const PRESSED_BG_COLOR := Color(0.16, 0.16, 0.16, 1)
 @onready var _order: Label = $CenterContainer/VBoxContainer/Order
 @onready var _name: Label = $CenterContainer/VBoxContainer/Name
 @onready var _stars: HBoxContainer = $DifficultyStars
+@onready var _status: Label = $HBoxContainer/Status
 
 var _level_data: Dictionary = {}
 
@@ -37,6 +38,7 @@ func _ready() -> void:
     mouse_exited.connect(_on_mouse_exited)
     _set_mouse_filter_ignore($CenterContainer)
     _set_mouse_filter_ignore($DifficultyStars)
+    _set_mouse_filter_ignore($HBoxContainer)
 
     if _level_data.is_empty():
         return
@@ -70,6 +72,19 @@ func _apply_level_data() -> void:
     _order.text = _format_level_order(level)
     _name.text = str(_level_data.get("name", ""))
     _apply_difficulty_stars(int(_level_data.get("difficulty", 1)))
+    _apply_clear_status(level)
+
+
+func _apply_clear_status(level: int) -> void:
+    if _status == null:
+        return
+
+    var tasks: Variant = _level_data.get("tasks", [])
+    var task_count: int = 0
+    if tasks is Array:
+        task_count = tasks.size()
+    var cleared := TaskProgress.is_level_cleared(level, task_count)
+    _status.text = "已通关" if cleared else "未通关"
 
 
 func _apply_difficulty_stars(difficulty: int) -> void:

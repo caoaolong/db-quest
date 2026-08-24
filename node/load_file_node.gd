@@ -18,7 +18,6 @@ func _ready() -> void:
 func _configure_action_bar() -> void:
     if action == null:
         return
-    action.set_run_visible(true)
     action.set_button_visible("Delete", false)
 
 

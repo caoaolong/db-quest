@@ -12,7 +12,6 @@ static func handle(signature: String, graph_edit: GraphEdit) -> void:
     if graph_edit == null or signature.is_empty():
         return
 
-    var variables := GameState.get_current_level_variables()
     var tasks := GameState.get_current_level_tasks()
     for index in tasks.size():
         var task: Variant = tasks[index]
@@ -24,7 +23,7 @@ static func handle(signature: String, graph_edit: GraphEdit) -> void:
             continue
 
         var title := str(task.get("title", ""))
-        if GoalValidator.evaluate_task(task as Dictionary, graph_edit, variables):
+        if GoalValidator.evaluate_task(task as Dictionary, graph_edit):
             GameState.mark_task_completed(index)
             EditorLog.info("任务完成: %s" % title)
         else:

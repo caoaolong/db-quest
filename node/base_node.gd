@@ -176,9 +176,7 @@ func _ready() -> void:
 
 
 func _configure_action_bar() -> void:
-    if action == null:
-        return
-    action.set_run_visible(category != "Tools")
+    pass
 
 
 func _bind_action_bar() -> void:
@@ -187,18 +185,6 @@ func _bind_action_bar() -> void:
 
     action.delete_clicked.connect(_on_delete_clicked)
     action.display_clicked.connect(_on_display_clicked)
-    action.run_clicked.connect(_on_run_clicked)
-
-
-func _on_run_clicked() -> void:
-    var graph_node := get_parent() as GraphNode
-    if graph_node == null:
-        return
-
-    var graph_edit := graph_node.get_parent()
-    # 所有节点共用同一套执行规范：pre → queue → after，只跑自身与上游
-    if graph_edit != null and graph_edit.has_method("run_node"):
-        graph_edit.run_node(graph_node)
 
 
 func _on_display_clicked() -> void:

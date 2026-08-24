@@ -46,6 +46,17 @@ static func load_progress(level: int) -> Array[int]:
     return result
 
 
+static func is_level_cleared(level: int, task_count: int) -> bool:
+    if level <= 0 or task_count <= 0:
+        return false
+
+    var completed := load_progress(level)
+    for index in task_count:
+        if index not in completed:
+            return false
+    return true
+
+
 static func _ensure_dir() -> void:
     var dir := DirAccess.open("user://")
     if dir == null:

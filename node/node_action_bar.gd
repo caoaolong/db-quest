@@ -4,12 +4,10 @@ class_name NodeActionBar
 signal display_clicked
 signal delete_clicked
 signal help_clicked
-signal run_clicked
 
 var display_dialog: DisplayDialog = null
 var _spend_tween: Tween
 
-@onready var run_button: Button = $HBoxContainer/Run
 @onready var progress_bar: ProgressBar = $ProgressBar
 
 
@@ -20,11 +18,6 @@ func _ready() -> void:
         progress_bar.max_value = 100
         progress_bar.value = 0
         progress_bar.show_percentage = false
-
-
-func set_run_visible(_is_visible: bool) -> void:
-    if run_button:
-        run_button.visible = _is_visible
 
 
 func set_button_visible(button_name: String, _is_visible: bool) -> void:
@@ -78,10 +71,6 @@ func _bind_display_dialog() -> void:
 
 func _on_delete_pressed() -> void:
     delete_clicked.emit()
-
-
-func _on_run_pressed() -> void:
-    run_clicked.emit()
 
 
 func _on_display_pressed() -> void:

@@ -1,9 +1,9 @@
 extends GraphEdit
 
-# 执行规范（任意节点点 Run 都走这三段，只跑目标及其上游）：
-# pre   普通上游，不参与队列投递（LoadFile / Number / Operation / Data 等）
-# queue 队列波次：Queue 类型，或带 QUEUE 口 / 从 QUEUE 取数的节点（Split / Merge / 接队列的 Disk）
-# after 队列收敛之后的下游（Merge 之后的节点等）
+# 执行规范（画布 Run 走这三段，按依赖拓扑顺序跑全部节点）：
+# pre   DataSplit / 队列源之前的上游（LoadFile / Number / Operation 等）
+# queue 从队列源（DataSplit 等）起及其全部下游：按分片数 N 整段跑 N 次
+# after 预留（当前为空；下游已并入 queue 波次）
 
 enum SlotType {
     INPUT,
@@ -25,14 +25,20 @@ const SLOT_COLORS: Dictionary = {
 }
 
 const node_style = preload("res://node/node_style.tres")
-const ROW_HORIZONTAL_MARGIN := 12
+# 端口两侧留白，避免点到 Label/输入框时抢走连线热区、误触发拖动节点
+const ROW_PORT_SIDE_MARGIN := 28
+const PORT_HOTZONE_INNER := 32
+const PORT_HOTZONE_OUTER := 40
 const SYSTEM_NODE_POSITIONS := {
     "LoadFile": Vector2(40, 80),
 }
 
 var _is_restoring := false
 var _is_running := false
+var _run_spend_ms := 0
 var _save_timer: Timer
+
+signal run_spend_changed(total_ms: int)
 
 
 func _ready() -> void:
@@ -50,6 +56,9 @@ func _ready() -> void:
 
     add_valid_connection_type(Slot.QUEUE, Slot.DATA)
     add_valid_connection_type(Slot.DATA, Slot.QUEUE)
+
+    add_theme_constant_override("port_hotzone_inner_extent", PORT_HOTZONE_INNER)
+    add_theme_constant_override("port_hotzone_outer_extent", PORT_HOTZONE_OUTER)
 
     call_deferred("load_snapshot")
 
@@ -115,16 +124,66 @@ func _on_popup_request(at_position: Vector2) -> void:
     schedule_save()
 
 
-func run_node(target: GraphNode) -> void:
+# 自定义端口热区：加大可点范围，并不再被行内 Label 等控件抢走点击
+func _is_in_output_hotzone(in_node: Variant, in_port: int, mouse_position: Vector2) -> bool:
+    return _port_hotzone_contains(in_node as GraphNode, in_port, mouse_position, false)
+
+
+func _is_in_input_hotzone(in_node: Variant, in_port: int, mouse_position: Vector2) -> bool:
+    return _port_hotzone_contains(in_node as GraphNode, in_port, mouse_position, true)
+
+
+func _port_hotzone_contains(
+    graph_node: GraphNode,
+    port_idx: int,
+    mouse_position: Vector2,
+    is_input: bool
+) -> bool:
+    if graph_node == null or not is_instance_valid(graph_node):
+        return false
+
+    var port_local: Vector2
+    var slot_index: int
+    if is_input:
+        port_local = graph_node.get_input_port_position(port_idx)
+        slot_index = graph_node.get_input_port_slot(port_idx)
+    else:
+        port_local = graph_node.get_output_port_position(port_idx)
+        slot_index = graph_node.get_output_port_slot(port_idx)
+
+    # 与 GraphEdit 引擎坐标一致：port + position / zoom
+    var port_pos := port_local + graph_node.position / zoom
+    var inner := float(get_theme_constant("port_hotzone_inner_extent"))
+    var outer := float(get_theme_constant("port_hotzone_outer_extent"))
+
+    var slot_height := 28.0
+    if slot_index >= 0 and slot_index < graph_node.get_child_count():
+        var slot_child := graph_node.get_child(slot_index) as Control
+        if slot_child:
+            slot_height = maxf(slot_height, slot_child.size.y)
+
+    var hotzone := Rect2(
+        port_pos.x - (outer if is_input else inner),
+        port_pos.y - slot_height * 0.5,
+        inner + outer,
+        slot_height
+    )
+    return hotzone.has_point(mouse_position)
+
+
+func run_all() -> void:
     if _is_running:
         return
     _is_running = true
+    _set_run_spend(0)
 
-    var upstream := _collect_upstream_closure(target)
-    if upstream.is_empty():
-        upstream[String(target.name)] = target
+    var all_nodes := _collect_enabled_graph_nodes()
+    if all_nodes.is_empty():
+        EditorLog.info("没有启用的节点可运行")
+        _is_running = false
+        return
 
-    var order: Array = compute_execution_order(target)
+    var order: Array = _compute_execution_order(all_nodes)
     var results: Dictionary = {}
 
     for graph_node in order:
@@ -134,8 +193,12 @@ func run_node(target: GraphNode) -> void:
             node.queue_total = 1
             node.queue_length = 0
 
-    # 任意节点点 Run 都按 pre → queue → after 三段执行
-    var phases := _classify_run_phases(order, upstream)
+    _reset_run_status(_collect_all_graph_nodes())
+    for graph_node in order:
+        _set_graph_run_status(graph_node, QuestGraphNode.RunStatus.PENDING)
+
+    # 全画布按 pre → queue → after 三段执行
+    var phases := _classify_run_phases(order, all_nodes)
     await _run_phase(phases["pre"], results)
     await _run_queue_wave(phases["queue"], results)
     await _run_phase(phases["after"], results)
@@ -143,33 +206,74 @@ func run_node(target: GraphNode) -> void:
     _is_running = false
 
 
+func get_run_spend_ms() -> int:
+    return _run_spend_ms
+
+
+func _set_run_spend(total_ms: int) -> void:
+    _run_spend_ms = maxi(0, total_ms)
+    run_spend_changed.emit(_run_spend_ms)
+
+
+func _add_run_spend(delta_ms: int) -> void:
+    if delta_ms <= 0:
+        return
+    _set_run_spend(_run_spend_ms + delta_ms)
+
+
+func _collect_all_graph_nodes() -> Dictionary:
+    var nodes: Dictionary = {}
+    for child in get_children():
+        if child is GraphNode:
+            nodes[String(child.name)] = child
+    return nodes
+
+
+func _collect_enabled_graph_nodes() -> Dictionary:
+    var nodes: Dictionary = {}
+    for child in get_children():
+        if not child is GraphNode:
+            continue
+        if child is QuestGraphNode and not (child as QuestGraphNode).is_run_enabled():
+            continue
+        nodes[String(child.name)] = child
+    return nodes
+
+
+func _is_graph_node_enabled(graph_node: GraphNode) -> bool:
+    if graph_node is QuestGraphNode:
+        return (graph_node as QuestGraphNode).is_run_enabled()
+    return true
+
+
 func _classify_run_phases(order: Array, upstream: Dictionary) -> Dictionary:
-    var queue_nodes: Array = []
-    var queue_names := {}
+    # 队列源（如 DataSplit）及其全部下游都进入波次，按 N 次执行
+    var wave_names := {}
     for graph_node in order:
         var node_name := String(graph_node.name)
         if not upstream.has(node_name):
             continue
-        if _is_queue_phase_node(graph_node):
-            queue_nodes.append(graph_node)
-            queue_names[node_name] = true
+        if not _is_queue_phase_node(graph_node):
+            continue
+        var downstream := _collect_downstream_closure(graph_node, upstream)
+        for key in downstream.keys():
+            wave_names[key] = true
 
-    var after_names := _collect_nodes_after_queue(queue_nodes, upstream)
     var pre_nodes: Array = []
-    var after_nodes: Array = []
+    var queue_nodes: Array = []
     for graph_node in order:
         var node_name := String(graph_node.name)
-        if not upstream.has(node_name) or queue_names.has(node_name):
+        if not upstream.has(node_name):
             continue
-        if after_names.has(node_name):
-            after_nodes.append(graph_node)
+        if wave_names.has(node_name):
+            queue_nodes.append(graph_node)
         else:
             pre_nodes.append(graph_node)
 
     return {
         "pre": pre_nodes,
         "queue": queue_nodes,
-        "after": after_nodes,
+        "after": [],
     }
 
 
@@ -195,45 +299,43 @@ func _run_queue_wave(queue_nodes: Array, results: Dictionary) -> void:
                 node.queue_index = step
                 node.queue_total = total
             await _execute_graph_node(graph_node, results)
+            # 仅队列源（DataSplit 等）用 queue_length 扩展波次数
             if node and _is_queue_phase_node(graph_node):
                 total = maxi(total, maxi(1, node.queue_length))
         step += 1
 
 
 func _is_queue_phase_node(graph_node: GraphNode) -> bool:
-    if str(graph_node.get_meta("node_type", "")) == "Queue":
+    var node_type := str(graph_node.get_meta("node_type", ""))
+    # DataSplit 输出为 DATA，但仍是队列波次源
+    if node_type == "Queue" or node_type == "DataSplit":
         return true
     return _has_queue_output(graph_node) or _has_queue_inbound(graph_node)
 
 
-func _collect_nodes_after_queue(queue_nodes: Array, allowed: Dictionary) -> Dictionary:
-    var after_names := {}
-    if queue_nodes.is_empty():
-        return after_names
-
-    var visited := {}
-    var stack: Array = []
-    for graph_node in queue_nodes:
-        stack.append(graph_node)
-        visited[String(graph_node.name)] = true
+func _collect_downstream_closure(start: GraphNode, allowed: Dictionary) -> Dictionary:
+    var closure: Dictionary = {}
+    var stack: Array = [start]
 
     while not stack.is_empty():
         var node: GraphNode = stack.pop_back()
         var node_name := String(node.name)
+        if closure.has(node_name):
+            continue
+        if not allowed.has(node_name):
+            continue
+        closure[node_name] = node
+
         for conn in get_connection_list():
             var from_name := String(conn.get("from_node", conn.get("from")))
             if from_name != node_name:
                 continue
             var to_name := String(conn.get("to_node", conn.get("to")))
-            if not allowed.has(to_name) or visited.has(to_name):
+            if not allowed.has(to_name) or closure.has(to_name):
                 continue
-            visited[to_name] = true
-            var to_node: GraphNode = allowed[to_name]
-            stack.append(to_node)
-            if not _is_queue_phase_node(to_node):
-                after_names[to_name] = true
+            stack.append(allowed[to_name])
 
-    return after_names
+    return closure
 
 
 func _has_queue_output(graph_node: GraphNode) -> bool:
@@ -266,23 +368,39 @@ func _base_node_of(graph_node: GraphNode) -> BaseNode:
 func _execute_graph_node(graph_node: GraphNode, results: Dictionary) -> Variant:
     if not is_instance_valid(graph_node):
         return null
+    if not _is_graph_node_enabled(graph_node):
+        return null
 
     var content: Node = graph_node.get_child(0)
     if not content is BaseNode:
         return null
 
+    _set_graph_run_status(graph_node, QuestGraphNode.RunStatus.RUNNING)
     var node: BaseNode = content as BaseNode
     var inputs: Dictionary = _collect_run_inputs(graph_node, results)
+    var spend_ms := node.get_spend()
     await node.play_spend()
+    _add_run_spend(spend_ms)
     if not is_instance_valid(graph_node) or not is_instance_valid(node):
         return null
     var result: Variant = await node.run(inputs)
     results[String(graph_node.name)] = result
+    _set_graph_run_status(graph_node, QuestGraphNode.RunStatus.DONE)
 
     var node_type: String = str(graph_node.get_meta("node_type", ""))
     if node_type == "Disk":
         TaskTrigger.handle(TaskTrigger.AFTER_DISK_RUN, self)
     return result
+
+
+func _reset_run_status(nodes: Dictionary) -> void:
+    for graph_node in nodes.values():
+        _set_graph_run_status(graph_node, QuestGraphNode.RunStatus.IDLE)
+
+
+func _set_graph_run_status(graph_node: GraphNode, status: QuestGraphNode.RunStatus) -> void:
+    if graph_node is QuestGraphNode:
+        (graph_node as QuestGraphNode).set_run_status(status)
 
 
 func _collect_run_inputs(graph_node: GraphNode, results: Dictionary) -> Dictionary:
@@ -308,7 +426,10 @@ func compute_execution_order(target: GraphNode) -> Array:
     var closure := _collect_upstream_closure(target)
     if closure.is_empty():
         return [target]
+    return _compute_execution_order(closure)
 
+
+func _compute_execution_order(closure: Dictionary) -> Array:
     var in_degree: Dictionary = {}
     var adjacency: Dictionary = {}
     for node_name in closure.keys():
@@ -340,7 +461,7 @@ func compute_execution_order(target: GraphNode) -> Array:
         ready_queue.sort()
 
     if order.size() != closure.size():
-        EditorLog.warn("Graph cycle detected while computing execution order for: %s" % target.name)
+        EditorLog.warn("Graph cycle detected while computing execution order")
         for node_name in closure.keys():
             var graph_node: GraphNode = closure[node_name]
             if not graph_node in order:
@@ -449,6 +570,7 @@ func create_node_from_config(
     node.set_meta("template_name", template_name)
     node.set_meta("node_type", node_type)
     node.add_theme_stylebox_override("panel", node_style)
+    node.run_enable_state_changed.connect(_on_node_run_enabled_changed)
 
     var content := scene.instantiate() as Control
     if content is BaseNode:
@@ -481,9 +603,22 @@ func create_node_from_config(
         node.position_offset = Vector2(40 + graph_node_count * 24, 40 + graph_node_count * 24)
 
     add_child(node)
-    _apply_node_state(content, state)
+    var graph_enabled := bool(state.get("graph_enabled", true))
+    var node_state := state.duplicate(true)
+    node_state.erase("graph_enabled")
+    _apply_graph_node_enabled(node, graph_enabled)
+    _apply_node_state(content, node_state)
     schedule_save()
     return node
+
+
+func _apply_graph_node_enabled(graph_node: GraphNode, enabled: bool) -> void:
+    if graph_node is QuestGraphNode:
+        (graph_node as QuestGraphNode).set_run_enabled(enabled)
+
+
+func _on_node_run_enabled_changed(_enabled: bool) -> void:
+    schedule_save()
 
 
 func clear_run_data() -> void:
@@ -499,6 +634,7 @@ func clear_run_data() -> void:
             base_node.clear_run_data()
             if base_node.action:
                 base_node.action.reset_progress()
+        _set_graph_run_status(child as GraphNode, QuestGraphNode.RunStatus.IDLE)
     schedule_save()
 
 
@@ -535,7 +671,7 @@ func export_snapshot() -> Dictionary:
 
         var graph_node := child as GraphNode
         var content := graph_node.get_child(0) as Control
-        nodes_data.append({
+        var node_entry := {
             "instance_id": String(graph_node.name),
             "template_name": str(graph_node.get_meta("template_name", graph_node.name)),
             "position": {
@@ -543,7 +679,10 @@ func export_snapshot() -> Dictionary:
                 "y": graph_node.position_offset.y,
             },
             "state": _export_node_state(content),
-        })
+        }
+        if graph_node is QuestGraphNode:
+            node_entry["enabled"] = (graph_node as QuestGraphNode).is_run_enabled()
+        nodes_data.append(node_entry)
 
     var connections_data: Array = []
     for conn in get_connection_list():
@@ -585,13 +724,17 @@ func load_snapshot() -> void:
                 float(position_dict.get("y", 0.0))
             )
             var state: Dictionary = node_data.get("state", {})
-            create_node_from_config(
+            if node_data.has("enabled"):
+                state["graph_enabled"] = bool(node_data.get("enabled", true))
+            var created := create_node_from_config(
                 item,
                 str(node_data.get("instance_id", "")),
                 node_position,
                 state,
                 GameState.is_system_node_name(template_name)
             )
+            if created == null:
+                continue
 
         for conn in snapshot.get("connections", []):
             if not conn is Dictionary:
@@ -763,9 +906,12 @@ func _bind_row_control_save(control: Control) -> void:
 
 func _wrap_row_control(control: Control) -> MarginContainer:
     var margin := MarginContainer.new()
-    margin.add_theme_constant_override("margin_left", ROW_HORIZONTAL_MARGIN)
-    margin.add_theme_constant_override("margin_right", ROW_HORIZONTAL_MARGIN)
+    margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    margin.add_theme_constant_override("margin_left", ROW_PORT_SIDE_MARGIN)
+    margin.add_theme_constant_override("margin_right", ROW_PORT_SIDE_MARGIN)
     control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    if control is Label:
+        control.mouse_filter = Control.MOUSE_FILTER_IGNORE
     margin.add_child(control)
     return margin
 
