@@ -6,9 +6,10 @@ const AFTER_VD_WRITE := "after(VD->write)"
 const AFTER_VD_READ := "after(VD->read)"
 const AFTER_FILE_RUN := "after(File->run)"
 const AFTER_VF_WRITE := "after(VF->write)"
+const AFTER_VF_READ := "after(VF->read)"
 
 
-static func handle(signature: String, graph_edit: GraphEdit) -> void:
+static func handle(signature: String, graph_edit: GraphEdit, warn_on_fail: bool = true) -> void:
     if graph_edit == null or signature.is_empty():
         return
 
@@ -26,8 +27,14 @@ static func handle(signature: String, graph_edit: GraphEdit) -> void:
         if GoalValidator.evaluate_task(task as Dictionary, graph_edit):
             GameState.mark_task_completed(index)
             EditorLog.info("任务完成: %s" % title)
-        else:
+        elif warn_on_fail:
             EditorLog.warn("任务未完成: %s" % title)
+
+
+static func reevaluate(signatures: Array, graph_edit: GraphEdit) -> void:
+    for signature in signatures:
+        if signature is String:
+            handle(signature as String, graph_edit, false)
 
 
 static func parse(signature: String) -> Dictionary:

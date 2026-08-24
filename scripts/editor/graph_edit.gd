@@ -1,7 +1,7 @@
 extends GraphEdit
 
 # 执行规范（画布 Run 走这三段，按依赖拓扑顺序跑全部节点）：
-# pre   DataSplit / 队列源之前的上游（LoadFile / Number / Operation 等）
+# pre   DataSplit / 队列源之前的上游（LoadFile / Number / LoadOperation 等）
 # queue 从队列源（DataSplit 等）起及其全部下游：按分片数 N 整段跑 N 次
 # after 预留（当前为空；下游已并入 queue 波次）
 
@@ -202,6 +202,11 @@ func run_all() -> void:
     await _run_phase(phases["pre"], results)
     await _run_queue_wave(phases["queue"], results)
     await _run_phase(phases["after"], results)
+
+    TaskTrigger.reevaluate([
+        TaskTrigger.AFTER_VD_READ,
+        TaskTrigger.AFTER_VF_READ,
+    ], self)
 
     _is_running = false
 
@@ -844,9 +849,15 @@ func _set_graph_node_title(graph_node: GraphNode, attributes: Dictionary, config
 
 
 func _build_node_rows(node: GraphNode, attributes: Dictionary) -> void:
+    var slots: Array = []
     for row in attributes.get("slots", []):
         if row is Dictionary:
-            _add_row_from_config(node, row)
+            slots.append(row)
+    slots.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        return int(a.get("row_number", 0)) < int(b.get("row_number", 0))
+    )
+    for row in slots:
+        _add_row_from_config(node, row)
 
 
 func _add_row_from_config(node: GraphNode, row: Dictionary) -> void:
@@ -863,7 +874,7 @@ func _add_row_from_config(node: GraphNode, row: Dictionary) -> void:
 
 func create_node_row(
     node: GraphNode,
-    _row_number: int,
+    row_number: int,
     row_name: String,
     op_list: Array,
     row_options: Variant = [],
@@ -872,8 +883,30 @@ func create_node_row(
     var operation := _resolve_row_operation(op_list)
     var row_control := _create_row_control(row_name, row_options, row_number_input, operation)
     _bind_row_control_save(row_control)
-    node.add_child(_wrap_row_control(row_control))
-    var slot_index := node.get_child_count() - 1
+    var wrapper := _wrap_row_control(row_control)
+    var slot_index := maxi(1, row_number)
+
+    while node.get_child_count() < slot_index:
+        var placeholder := _wrap_row_control(Label.new())
+        var placeholder_label := placeholder.get_child(0) as Label
+        placeholder_label.text = ""
+        placeholder_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        node.add_child(placeholder)
+        var placeholder_index := node.get_child_count() - 1
+        node.set_slot_enabled_left(placeholder_index, false)
+        node.set_slot_enabled_right(placeholder_index, false)
+
+    if slot_index < node.get_child_count():
+        var existing := node.get_child(slot_index)
+        if existing:
+            node.remove_child(existing)
+            existing.queue_free()
+
+    if slot_index == node.get_child_count():
+        node.add_child(wrapper)
+    else:
+        node.add_child(wrapper)
+        node.move_child(wrapper, slot_index)
 
     for op in op_list:
         if not op is Dictionary:

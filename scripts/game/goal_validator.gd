@@ -62,10 +62,11 @@ static func _resolve_operand(operand: String, graph_edit: GraphEdit) -> Variant:
                 "source": str(buffer_spec.get("source", "")),
                 "start": int(buffer_spec.get("start", 0)),
             }
-        return _resolve_buffer_sector(
-            str(buffer_spec.get("source", "")),
-            int(buffer_spec.get("start", 0))
-        )
+        var source := str(buffer_spec.get("source", ""))
+        var index := int(buffer_spec.get("start", 0))
+        if source == "vf":
+            return VirtualFile.read_page(GameState.virtual_file_path, index)
+        return _resolve_buffer_sector(source, index)
 
     return _resolve_literal(operand)
 
@@ -77,6 +78,8 @@ static func _parse_buffer_spec(operand: String) -> Dictionary:
         source = "vd"
     elif operand.begins_with("RB["):
         source = "rb"
+    elif operand.begins_with("VF["):
+        source = "vf"
     else:
         return {}
     if not operand.ends_with("]"):
@@ -154,7 +157,7 @@ static func _resolve_literal(value: String) -> Variant:
     var path := value.strip_edges()
     if path.begins_with("res://") or path.begins_with("user://"):
         if FileAccess.file_exists(path):
-            return FileAccess.get_file_as_string(path)
+            return FileAccess.get_file_as_bytes(path)
     return value
 
 
@@ -182,13 +185,20 @@ static func _compare_byte_range(left: Variant, right: Variant) -> bool:
     if expected_bytes.is_empty():
         return false
 
-    var start_sector := int(range_spec.get("start", 0))
-    var byte_offset := start_sector * VirtualDisk.SECTOR_SIZE
+    var start_index := int(range_spec.get("start", 0))
+    var page_size := VirtualFile.PAGE_SIZE if str(range_spec.get("source", "")) == "vf" else VirtualDisk.SECTOR_SIZE
+    var byte_offset := start_index * page_size
     var actual := PackedByteArray()
     if str(range_spec.get("source", "")) == "rb":
         if not GameState.read_buffer.is_range_covered(byte_offset, expected_bytes.size()):
             return false
         actual = GameState.read_buffer.read_bytes(byte_offset, expected_bytes.size())
+    elif str(range_spec.get("source", "")) == "vf":
+        actual = VirtualFile.read_bytes(
+            GameState.virtual_file_path,
+            byte_offset,
+            expected_bytes.size()
+        )
     else:
         actual = VirtualDisk.read_bytes(
             GameState.virtual_disk_path,
@@ -198,11 +208,23 @@ static func _compare_byte_range(left: Variant, right: Variant) -> bool:
     return actual == expected_bytes
 
 
+static func _compare_packed_bytes(left: Variant, right: Variant) -> bool:
+    var left_bytes := _to_compare_bytes(left)
+    var right_bytes := _to_compare_bytes(right)
+    if left_bytes.size() == VirtualFile.PAGE_SIZE and right_bytes.size() > VirtualFile.PAGE_SIZE:
+        right_bytes = right_bytes.slice(0, VirtualFile.PAGE_SIZE)
+    elif right_bytes.size() == VirtualFile.PAGE_SIZE and left_bytes.size() > VirtualFile.PAGE_SIZE:
+        left_bytes = left_bytes.slice(0, VirtualFile.PAGE_SIZE)
+    return left_bytes == right_bytes
+
+
 static func _compare_values(left: Variant, right: Variant, operator: String) -> bool:
     if operator in ["==", "!="]:
         var equal: bool
         if _is_byte_range(left) or _is_byte_range(right):
             equal = _compare_byte_range(left, right)
+        elif left is PackedByteArray or right is PackedByteArray:
+            equal = _compare_packed_bytes(left, right)
         else:
             equal = str(left) == str(right)
         return equal if operator == "==" else not equal

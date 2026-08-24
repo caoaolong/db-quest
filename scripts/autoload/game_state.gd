@@ -117,8 +117,11 @@ func _save_task_progress() -> void:
 
 
 func get_node_entry(template_name: String) -> Dictionary:
+    var resolved_name := template_name
+    if template_name == "Operation":
+        resolved_name = "LoadOperation"
     for item in node_list:
-        if item is Dictionary and str(item.get("name", "")) == template_name:
+        if item is Dictionary and str(item.get("name", "")) == resolved_name:
             return item
     return {}
 

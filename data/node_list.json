@@ -139,11 +139,11 @@
         }
     },
     {
-        "name": "Operation",
-        "type": "Operation",
+        "name": "LoadOperation",
+        "type": "LoadOperation",
         "label": "Load Operation",
         "category": "Tools",
-        "scene": "res://node/operation_node.tscn",
+        "scene": "res://node/load_operation_node.tscn",
         "spend": 50,
         "attributes": {
             "subtitle": "OP",
@@ -276,6 +276,20 @@
                 },
                 {
                     "row_number": 2.0,
+                    "row_name": "Data",
+                    "op_list": [
+                        {
+                            "operation": "DATA",
+                            "type": "INPUT"
+                        },
+                        {
+                            "operation": "DATA",
+                            "type": "OUTPUT"
+                        }
+                    ]
+                },
+                {
+                    "row_number": 3.0,
                     "row_name": "Page",
                     "op_list": [
                         {
@@ -285,72 +299,12 @@
                     ]
                 },
                 {
-                    "row_number": 3.0,
-                    "row_name": "Data",
-                    "op_list": [
-                        {
-                            "operation": "DATA",
-                            "type": "INPUT"
-                        },
-                        {
-                            "operation": "DATA",
-                            "type": "OUTPUT"
-                        }
-                    ]
-                }
-            ]
-        }
-    },
-    {
-        "name": "FileAdapter",
-        "type": "FileAdapter",
-        "label": "File Adapter",
-        "category": "File",
-        "scene": "res://node/file_adapter_node.tscn",
-        "unique": true,
-        "spend": 50,
-        "attributes": {
-            "title": "文件适配器",
-            "subtitle": "...",
-            "slots": [
-                {
-                    "row_number": 1.0,
-                    "row_options": [
-                        "READ",
-                        "WRITE"
-                    ],
-                    "op_list": [
-                        {
-                            "operation": "OPERATION_CODE",
-                            "type": "OUTPUT"
-                        }
-                    ]
-                },
-                {
-                    "row_number": 2.0,
-                    "row_number_input": "Page",
+                    "row_number": 4.0,
+                    "row_name": "Count",
                     "op_list": [
                         {
                             "operation": "INT",
                             "type": "INPUT"
-                        },
-                        {
-                            "operation": "INT",
-                            "type": "OUTPUT"
-                        }
-                    ]
-                },
-                {
-                    "row_number": 3.0,
-                    "row_name": "Data",
-                    "op_list": [
-                        {
-                            "operation": "DATA",
-                            "type": "INPUT"
-                        },
-                        {
-                            "operation": "DATA",
-                            "type": "OUTPUT"
                         }
                     ]
                 }

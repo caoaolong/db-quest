@@ -1,4 +1,4 @@
-class_name OperationNode
+class_name LoadOperationNode
 extends BaseNode
 
 """

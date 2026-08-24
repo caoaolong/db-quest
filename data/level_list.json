@@ -7,7 +7,7 @@
         "nodes": [
             "Disk",
             "Number",
-            "Operation"
+            "LoadOperation"
         ],
         "files": {
             "data": "res://data/128B.txt"
@@ -53,7 +53,7 @@
         "nodes": [
             "Disk",
             "Number",
-            "Operation",
+            "LoadOperation",
             "DataSplit",
             "DataMerge"
         ],
@@ -91,11 +91,10 @@
         "nodes": [
             "Disk",
             "Number",
-            "Operation",
+            "LoadOperation",
             "DataSplit",
             "DataMerge",
-            "File",
-            "FileAdapter"
+            "File"
         ],
         "files": {
             "data": "res://data/6K.txt"
@@ -108,18 +107,18 @@
                     "EXP": 10000,
                     "COIN": 100
                 },
-                "trigger": "after(VD->write)",
-                "goal": "VD[0:] == ${files.data}"
+                "trigger": "after(VF->write)",
+                "goal": "VF[0] == ${files.data}"
             },
             {
                 "title": "读取文件页",
-                "description": "从磁盘读出已写入第「0」个文件页的数据",
+                "description": "使用「READ」将已写入的文件页完整读出",
                 "reward": {
                     "EXP": 10000,
                     "COIN": 100
                 },
-                "trigger": "after(VD->read)",
-                "goal": "RB[0:] == ${files.data}"
+                "trigger": "after(VF->read)",
+                "goal": "VF[0:] == ${files.data}"
             }
         ]
     }

@@ -6,6 +6,7 @@ extends PanelContainer
 @onready var _graph_edit: GraphEdit = $VBoxContainer/GraphEdit
 
 var _task_dialog: TaskDialog = null
+var _restart_confirm: ConfirmationDialog
 
 
 func _ready() -> void:
@@ -13,6 +14,17 @@ func _ready() -> void:
     _bind_task_dialog()
     _bind_status_log()
     _bind_run_spend()
+    _setup_restart_confirm()
+
+
+func _setup_restart_confirm() -> void:
+    _restart_confirm = ConfirmationDialog.new()
+    _restart_confirm.title = "确认重新开始"
+    _restart_confirm.dialog_text = "将清空画布节点与任务进度，是否继续？"
+    _restart_confirm.ok_button_text = "确定"
+    _restart_confirm.cancel_button_text = "取消"
+    _restart_confirm.confirmed.connect(_perform_restart)
+    add_child(_restart_confirm)
 
 
 func _bind_status_log() -> void:
@@ -77,6 +89,13 @@ func _on_back_pressed() -> void:
 
 
 func _on_restart_pressed() -> void:
+    if _restart_confirm == null:
+        _perform_restart()
+        return
+    _restart_confirm.popup_centered()
+
+
+func _perform_restart() -> void:
     if _graph_edit != null and _graph_edit.has_method("restart_graph"):
         _graph_edit.restart_graph()
     GameState.reset_task_progress()

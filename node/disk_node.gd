@@ -66,7 +66,7 @@ func run(inputs: Dictionary = {}) -> Variant:
         "WRITE":
             return _run_write(disk_path, slot_inputs)
         "":
-            EditorLog.warn("磁盘未收到操作码，请将 Operation 接到 Control Bus")
+            EditorLog.warn("磁盘未收到操作码，请将 Load Operation 接到 Control Bus")
             return {
                 "error": "Missing operation",
             }
