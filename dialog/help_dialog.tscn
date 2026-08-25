@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://dyxpvnj5tntcm"]
+
+[ext_resource type="Script" uid="uid://cgnqfptu677dt" path="res://dialog/help_dialog.gd" id="1_help"]
+[ext_resource type="StyleBox" uid="uid://cwe8fgpua86so" path="res://dialog/popup_dialog_panel.tres" id="2_panel"]
+[ext_resource type="FontFile" uid="uid://dc1e8cjj16pfu" path="res://fonts/mm.ttf" id="3_yce3g"]
+
+[node name="HelpDialog" type="PopupPanel" unique_id=827456625]
+transparent_bg = false
+oversampling_override = 1.0
+initial_position = 1
+size = Vector2i(800, 600)
+visible = true
+transparent = false
+popup_window = false
+theme_override_styles/panel = ExtResource("2_panel")
+script = ExtResource("1_help")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=602805034]
+offset_right = 800.0
+offset_bottom = 600.0
+
+[node name="DragHandle" type="Control" parent="VBoxContainer" unique_id=660641912]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="Title" type="Label" parent="VBoxContainer" unique_id=1187165550]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "帮助"
+horizontal_alignment = 1
+
+[node name="TextEdit" type="TextEdit" parent="VBoxContainer" unique_id=1439819920]
+custom_minimum_size = Vector2(720, 480)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/font = ExtResource("3_yce3g")
+editable = false
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=725367684]
+layout_mode = 2
+alignment = 2
+
+[node name="Control" type="Control" parent="VBoxContainer/HBoxContainer" unique_id=1672876834]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Close" type="Button" parent="VBoxContainer/HBoxContainer" unique_id=1294491114]
+layout_mode = 2
+text = "Close"
+
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/Close" to="." method="_on_close_pressed"]

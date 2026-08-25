@@ -68,7 +68,7 @@ func _split_outputs(chunk: PackedByteArray, index: int) -> Dictionary:
     return {
         "__outputs": {
             "0": chunk,
-            "1": index,
+            "1": UintCodec.encode(index, UintCodec.TYPE_UINT64),
         },
     }
 

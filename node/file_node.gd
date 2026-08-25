@@ -64,7 +64,7 @@ func run(inputs: Dictionary = {}) -> Variant:
         "WRITE":
             result = _run_write(file_path, slot_inputs)
         "":
-            EditorLog.warn("文件未收到操作码，请将 Load Operation 接到 Code")
+            EditorLog.warn("文件未收到操作码，请将 Load String 接到 Code")
             result = {
                 "error": "Missing operation",
             }
@@ -143,8 +143,7 @@ func _normalize_operation(value: Variant) -> String:
 
 func _parse_page_index(value: Variant) -> int:
     if value is PackedByteArray or value is Array:
-        EditorLog.warn("页码端口收到了二进制数据，请检查 File 的 Page 与 Data 连线")
-        return 0
+        return UintCodec.decode(value, UintCodec.TYPE_UINT64)
     if value is int:
         return maxi(0, value)
     if value is float:

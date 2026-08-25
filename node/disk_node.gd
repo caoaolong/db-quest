@@ -66,7 +66,7 @@ func run(inputs: Dictionary = {}) -> Variant:
         "WRITE":
             return _run_write(disk_path, slot_inputs)
         "":
-            EditorLog.warn("磁盘未收到操作码，请将 Load Operation 接到 Control Bus")
+            EditorLog.warn("磁盘未收到操作码，请将 Load String 接到 Control Bus")
             return {
                 "error": "Missing operation",
             }
@@ -152,11 +152,7 @@ func _normalize_operation(value: Variant) -> String:
 
 
 func _get_sector_index(value: Variant) -> int:
-    if value is int:
-        return value
-    if value is float:
-        return int(value)
-    return int(str(value))
+    return UintCodec.decode(value, UintCodec.TYPE_UINT64)
 
 
 func _get_sector_count(value: Variant) -> int:

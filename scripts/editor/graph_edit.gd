@@ -1,7 +1,7 @@
 extends GraphEdit
 
 # 执行规范（画布 Run 走这三段，按依赖拓扑顺序跑全部节点）：
-# pre   DataSplit / 队列源之前的上游（LoadFile / Number / LoadOperation 等）
+# pre   DataSplit / 队列源之前的上游（LoadFile / Number / LoadString 等）
 # queue 从队列源（DataSplit 等）起及其全部下游：按分片数 N 整段跑 N 次
 # after 预留（当前为空；下游已并入 queue 波次）
 
@@ -12,16 +12,29 @@ enum SlotType {
 
 enum Slot {
     OPERATION_CODE,
-    INT,
     DATA,
     QUEUE,
+    UINT8,
+    UINT16,
+    UINT32,
+    UINT64,
 }
 
 const SLOT_COLORS: Dictionary = {
     Slot.OPERATION_CODE: "#F59E0B",
-    Slot.INT: "#3B82F6",
     Slot.DATA: "#A855F7",
     Slot.QUEUE: "#14B8A6",
+    Slot.UINT8: "#86EFAC",
+    Slot.UINT16: "#38BDF8",
+    Slot.UINT32: "#818CF8",
+    Slot.UINT64: "#3B82F6",
+}
+
+const UINT_SLOT_WIDTHS: Dictionary = {
+    Slot.UINT8: 1,
+    Slot.UINT16: 2,
+    Slot.UINT32: 4,
+    Slot.UINT64: 8,
 }
 
 const node_style = preload("res://node/node_style.tres")
@@ -56,11 +69,20 @@ func _ready() -> void:
 
     add_valid_connection_type(Slot.QUEUE, Slot.DATA)
     add_valid_connection_type(Slot.DATA, Slot.QUEUE)
+    _register_uint_widening_connections()
 
     add_theme_constant_override("port_hotzone_inner_extent", PORT_HOTZONE_INNER)
     add_theme_constant_override("port_hotzone_outer_extent", PORT_HOTZONE_OUTER)
 
     call_deferred("load_snapshot")
+
+
+func _register_uint_widening_connections() -> void:
+    var uint_slots: Array = [Slot.UINT8, Slot.UINT16, Slot.UINT32, Slot.UINT64]
+    for from_slot in uint_slots:
+        for to_slot in uint_slots:
+            if int(UINT_SLOT_WIDTHS.get(from_slot, 0)) < int(UINT_SLOT_WIDTHS.get(to_slot, 0)):
+                add_valid_connection_type(from_slot, to_slot)
 
 
 func is_restoring() -> bool:
@@ -940,11 +962,14 @@ func _bind_row_control_save(control: Control) -> void:
 func _wrap_row_control(control: Control) -> MarginContainer:
     var margin := MarginContainer.new()
     margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     margin.add_theme_constant_override("margin_left", ROW_PORT_SIDE_MARGIN)
     margin.add_theme_constant_override("margin_right", ROW_PORT_SIDE_MARGIN)
     control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     if control is Label:
         control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    elif control is OptionButton or control is SpinBox:
+        control.custom_minimum_size = Vector2(0, 0)
     margin.add_child(control)
     return margin
 
@@ -966,8 +991,8 @@ func _create_row_control(
         var spin_box := SpinBox.new()
         spin_box.min_value = 0
         match operation:
-            Slot.INT:
-                spin_box.max_value = 1_000_000_000
+            Slot.UINT8, Slot.UINT16, Slot.UINT32, Slot.UINT64:
+                spin_box.max_value = float(UintCodec.max_value(_slot_to_type_name(operation)))
             _:
                 spin_box.max_value = 100
         var line_edit := spin_box.get_line_edit()
@@ -989,7 +1014,13 @@ func _get_slot_color(slot: Slot) -> Color:
 func set_slot_operation(node: GraphNode, row_number: int, op_name: String, is_output: bool) -> void:
     var operation := _parse_operation(op_name)
     var slot_color := _get_slot_color(operation)
-    _disconnect_slot(node, row_number, is_output)
+    var type_changed := true
+    if is_output:
+        type_changed = not node.is_slot_enabled_right(row_number) or node.get_slot_type_right(row_number) != operation
+    else:
+        type_changed = not node.is_slot_enabled_left(row_number) or node.get_slot_type_left(row_number) != operation
+    if type_changed:
+        _disconnect_slot(node, row_number, is_output)
     if is_output:
         node.set_slot_enabled_right(row_number, true)
         node.set_slot_type_right(row_number, operation)
@@ -1030,18 +1061,38 @@ func _port_index_for_slot(node: GraphNode, row_number: int, is_output: bool) -> 
 
 
 func _parse_operation(op_name: String) -> Slot:
-    match op_name:
+    match op_name.strip_edges().to_upper():
         "OPERATION_CODE":
             return Slot.OPERATION_CODE
-        "INT":
-            return Slot.INT
         "DATA":
             return Slot.DATA
         "QUEUE":
             return Slot.QUEUE
+        "UINT8":
+            return Slot.UINT8
+        "UINT16":
+            return Slot.UINT16
+        "UINT32":
+            return Slot.UINT32
+        "UINT64", "INT":
+            return Slot.UINT64
         _:
             EditorLog.warn("Unknown operation: %s" % op_name)
             return Slot.OPERATION_CODE
+
+
+func _slot_to_type_name(slot: Slot) -> String:
+    match slot:
+        Slot.UINT8:
+            return UintCodec.TYPE_UINT8
+        Slot.UINT16:
+            return UintCodec.TYPE_UINT16
+        Slot.UINT32:
+            return UintCodec.TYPE_UINT32
+        Slot.UINT64:
+            return UintCodec.TYPE_UINT64
+        _:
+            return UintCodec.TYPE_UINT64
 
 
 func _parse_op_list(raw_list: Variant) -> Array:

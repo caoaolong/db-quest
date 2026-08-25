@@ -39,7 +39,7 @@
                     "row_name": "Address Bus",
                     "op_list": [
                         {
-                            "operation": "INT",
+                            "operation": "UINT64",
                             "type": "INPUT"
                         }
                     ]
@@ -49,7 +49,7 @@
                     "row_name": "Count",
                     "op_list": [
                         {
-                            "operation": "INT",
+                            "operation": "UINT64",
                             "type": "INPUT"
                         }
                     ]
@@ -92,7 +92,7 @@
                             "type": "INPUT"
                         },
                         {
-                            "operation": "INT",
+                            "operation": "UINT64",
                             "type": "OUTPUT"
                         }
                     ]
@@ -102,11 +102,11 @@
                     "row_number_input": "Address",
                     "op_list": [
                         {
-                            "operation": "INT",
+                            "operation": "UINT64",
                             "type": "INPUT"
                         },
                         {
-                            "operation": "INT",
+                            "operation": "UINT64",
                             "type": "OUTPUT"
                         }
                     ]
@@ -123,14 +123,14 @@
         "spend": 50,
         "attributes": {
             "title": "数字节点",
-            "subtitle": "INT",
+            "subtitle": "UINT64",
             "slots": [
                 {
                     "row_number": 1.0,
                     "row_name": "Number",
                     "op_list": [
                         {
-                            "operation": "INT",
+                            "operation": "UINT64",
                             "type": "OUTPUT"
                         }
                     ]
@@ -139,18 +139,18 @@
         }
     },
     {
-        "name": "LoadOperation",
-        "type": "LoadOperation",
-        "label": "Load Operation",
+        "name": "LoadString",
+        "type": "LoadString",
+        "label": "Load String",
         "category": "Tools",
-        "scene": "res://node/load_operation_node.tscn",
+        "scene": "res://node/load_string_node.tscn",
         "spend": 50,
         "attributes": {
-            "subtitle": "OP",
+            "subtitle": "STR",
             "slots": [
                 {
                     "row_number": 1.0,
-                    "row_name": "Operation",
+                    "row_name": "String",
                     "op_list": [
                         {
                             "operation": "OPERATION_CODE",
@@ -196,7 +196,7 @@
                     "row_name": "Index",
                     "op_list": [
                         {
-                            "operation": "INT",
+                            "operation": "UINT64",
                             "type": "OUTPUT"
                         }
                     ]
@@ -293,7 +293,7 @@
                     "row_name": "Page",
                     "op_list": [
                         {
-                            "operation": "INT",
+                            "operation": "UINT64",
                             "type": "INPUT"
                         }
                     ]
@@ -303,7 +303,79 @@
                     "row_name": "Count",
                     "op_list": [
                         {
-                            "operation": "INT",
+                            "operation": "UINT64",
+                            "type": "INPUT"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "name": "FilePage",
+        "type": "FilePage",
+        "label": "File Page",
+        "category": "File",
+        "scene": "res://node/file_page_node.tscn",
+        "unique": false,
+        "spend": 200,
+        "attributes": {
+            "title": "文件页",
+            "subtitle": "page 0 · off 0 · len 0",
+            "slots": [
+                {
+                    "row_number": 1.0,
+                    "row_options": [
+                        "READ",
+                        "WRITE"
+                    ],
+                    "op_list": [
+                        {
+                            "operation": "OPERATION_CODE",
+                            "type": "INPUT"
+                        }
+                    ]
+                },
+                {
+                    "row_number": 2.0,
+                    "row_number_input": "Page",
+                    "op_list": [
+                        {
+                            "operation": "UINT64",
+                            "type": "INPUT"
+                        }
+                    ]
+                },
+                {
+                    "row_number": 3.0,
+                    "row_name": "Offset",
+                    "op_list": [
+                        {
+                            "operation": "UINT16",
+                            "type": "INPUT"
+                        }
+                    ]
+                },
+                {
+                    "row_number": 4.0,
+                    "row_name": "Data",
+                    "op_list": [
+                        {
+                            "operation": "DATA",
+                            "type": "INPUT"
+                        },
+                        {
+                            "operation": "DATA",
+                            "type": "OUTPUT"
+                        }
+                    ]
+                },
+                {
+                    "row_number": 5.0,
+                    "row_name": "Length",
+                    "op_list": [
+                        {
+                            "operation": "UINT16",
                             "type": "INPUT"
                         }
                     ]

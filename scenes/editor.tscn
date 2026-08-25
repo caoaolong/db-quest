@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://u633aotie483" path="res://dialog/display_dialog.tscn" id="4_q0a35"]
 [ext_resource type="Script" uid="uid://bm6u423ifu2yg" path="res://scripts/editor/editor.gd" id="5_editor"]
 [ext_resource type="PackedScene" uid="uid://b4qxwukuicjci" path="res://dialog/task_dialog.tscn" id="6_task_dialog"]
+[ext_resource type="PackedScene" path="res://dialog/help_dialog.tscn" id="7_help_dialog"]
 
 [node name="Control" type="PanelContainer" unique_id=728991178]
 anchors_preset = 15
@@ -77,9 +78,14 @@ text = "Restart"
 layout_mode = 2
 text = "Run"
 
+[node name="Help" type="Button" parent="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer" unique_id=411054440]
+layout_mode = 2
+text = "Help"
+
 [node name="GraphEdit" type="GraphEdit" parent="VBoxContainer" unique_id=955933790]
 layout_mode = 2
 size_flags_vertical = 3
+scroll_offset = Vector2(0, -23)
 script = ExtResource("1_wlowb")
 
 [node name="StatusContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1398030426]
@@ -103,7 +109,11 @@ visible = false
 [node name="TaskDialog" parent="." unique_id=446183364 instance=ExtResource("6_task_dialog")]
 visible = false
 
+[node name="HelpDialog" parent="." instance=ExtResource("7_help_dialog")]
+visible = false
+
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Tasks" to="." method="_on_tasks_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Back" to="." method="_on_back_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Restart" to="." method="_on_restart_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Button" to="." method="_on_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Help" to="." method="_on_help_pressed"]

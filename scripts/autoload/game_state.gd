@@ -9,6 +9,8 @@ var load_previous: bool = false
 var available_nodes: Array[String] = []
 var current_tasks: Array = []
 var current_files: Dictionary = {}
+var current_help: String = ""
+var current_level_name: String = ""
 var completed_task_indices: Array[int] = []
 var node_list: Array = []
 var virtual_disk_path: String = ""
@@ -53,6 +55,14 @@ func is_node_available(node_name: String) -> bool:
 
 func get_current_level_tasks() -> Array:
     return current_tasks.duplicate(true)
+
+
+func get_current_level_help() -> String:
+    return current_help
+
+
+func get_current_level_name() -> String:
+    return current_level_name
 
 
 func get_level_files() -> Dictionary:
@@ -118,8 +128,8 @@ func _save_task_progress() -> void:
 
 func get_node_entry(template_name: String) -> Dictionary:
     var resolved_name := template_name
-    if template_name == "Operation":
-        resolved_name = "LoadOperation"
+    if template_name == "Operation" or template_name == "LoadOperation":
+        resolved_name = "LoadString"
     for item in node_list:
         if item is Dictionary and str(item.get("name", "")) == resolved_name:
             return item
@@ -315,6 +325,8 @@ func _load_level_config() -> void:
     available_nodes.clear()
     current_tasks.clear()
     current_files.clear()
+    current_help = ""
+    current_level_name = ""
     load_previous = false
     read_buffer.clear()
     _load_task_progress()
@@ -326,6 +338,8 @@ func _load_level_config() -> void:
             continue
 
         load_previous = bool(entry.get("load_previous", false))
+        current_level_name = str(entry.get("name", "")).strip_edges()
+        current_help = str(entry.get("help", "")).strip_edges()
 
         for node_name in entry.get("nodes", []):
             available_nodes.append(str(node_name))

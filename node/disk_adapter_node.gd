@@ -55,5 +55,5 @@ func _row_output_value(graph_node: GraphNode, slot_index: int) -> Variant:
             return ""
         return option.get_item_text(selected)
     if row_control is SpinBox:
-        return int((row_control as SpinBox).value)
+        return UintCodec.encode(int((row_control as SpinBox).value), UintCodec.TYPE_UINT64)
     return null

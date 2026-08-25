@@ -12,8 +12,9 @@ layout_mode = 2
 [node name="NodeActionBar" parent="VBoxContainer" unique_id=1300589146 instance=ExtResource("1_son88")]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="VBoxContainer" unique_id=1138369894]
+[node name="TypeOption" type="OptionButton" parent="VBoxContainer" unique_id=1787802970]
 layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="SpinBox" type="SpinBox" parent="VBoxContainer" unique_id=1113978654]
 layout_mode = 2

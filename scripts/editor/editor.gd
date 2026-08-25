@@ -6,12 +6,14 @@ extends PanelContainer
 @onready var _graph_edit: GraphEdit = $VBoxContainer/GraphEdit
 
 var _task_dialog: TaskDialog = null
+var _help_dialog: HelpDialog = null
 var _restart_confirm: ConfirmationDialog
 
 
 func _ready() -> void:
     _build_tab_bar()
     _bind_task_dialog()
+    _bind_help_dialog()
     _bind_status_log()
     _bind_run_spend()
     _setup_restart_confirm()
@@ -76,6 +78,10 @@ func _bind_task_dialog() -> void:
     _task_dialog = get_node_or_null("TaskDialog") as TaskDialog
 
 
+func _bind_help_dialog() -> void:
+    _help_dialog = get_node_or_null("HelpDialog") as HelpDialog
+
+
 func _build_tab_bar() -> void:
     while _tab_bar.tab_count > 0:
         _tab_bar.remove_tab(0)
@@ -110,3 +116,16 @@ func _on_button_pressed() -> void:
         return
     if _graph_edit.has_method("run_all"):
         await _graph_edit.run_all()
+
+
+func _on_help_pressed() -> void:
+    if _help_dialog == null:
+        _bind_help_dialog()
+    if _help_dialog == null:
+        push_error("HelpDialog not found")
+        return
+
+    await _help_dialog.show_help(
+        GameState.get_current_level_help(),
+        GameState.get_current_level_name()
+    )

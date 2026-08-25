@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://csgtlf8dktqss"]
 
-[ext_resource type="Script" path="res://node/load_operation_node.gd" id="1_load_operation"]
+[ext_resource type="Script" path="res://node/load_string_node.gd" id="1_load_string"]
 [ext_resource type="PackedScene" uid="uid://diupwx6dksdpq" path="res://node/node_action_bar.tscn" id="1_son88"]
 
-[node name="LoadOperationNode" type="PanelContainer"]
-script = ExtResource("1_load_operation")
+[node name="LoadStringNode" type="PanelContainer"]
+script = ExtResource("1_load_string")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2
