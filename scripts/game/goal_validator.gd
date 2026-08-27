@@ -2,12 +2,17 @@ class_name GoalValidator
 extends RefCounted
 
 const OPERATORS := [">=", "<=", "!=", "==", ">", "<"]
+const RULE_MARKER := " is "
 
 
 static func evaluate_goal(goal: String, graph_edit: GraphEdit) -> bool:
     var expression: String = LevelVariables.expand_goal(goal.strip_edges())
     if expression.is_empty():
         return false
+
+    var rule_check := _parse_rule_check(expression)
+    if not rule_check.is_empty():
+        return _evaluate_rule_check(rule_check, graph_edit)
 
     var parts := _split_comparison(expression)
     if parts.size() != 3:
@@ -23,6 +28,38 @@ static func evaluate_task(task: Dictionary, graph_edit: GraphEdit) -> bool:
     if not task is Dictionary:
         return false
     return evaluate_goal(str(task.get("goal", "")), graph_edit)
+
+
+static func _parse_rule_check(expression: String) -> Dictionary:
+    var index := expression.find(RULE_MARKER)
+    if index == -1:
+        return {}
+    var target := expression.substr(0, index).strip_edges()
+    var rule_name := expression.substr(index + RULE_MARKER.length()).strip_edges()
+    if target.is_empty() or rule_name.is_empty():
+        return {}
+    return {
+        "target": target,
+        "rule": rule_name,
+    }
+
+
+static func _evaluate_rule_check(rule_check: Dictionary, graph_edit: GraphEdit) -> bool:
+    var target := str(rule_check.get("target", ""))
+    var rule_name := str(rule_check.get("rule", ""))
+    var page_bytes := _resolve_page_bytes(target, graph_edit)
+    if page_bytes.is_empty():
+        return false
+    return PageRule.validate_page(page_bytes, rule_name)
+
+
+static func _resolve_page_bytes(operand: String, graph_edit: GraphEdit) -> PackedByteArray:
+    var value: Variant = _resolve_operand(operand, graph_edit)
+    if value is PackedByteArray:
+        return value as PackedByteArray
+    if value is String:
+        return (value as String).to_utf8_buffer()
+    return PackedByteArray()
 
 
 static func _split_comparison(expression: String) -> Array:

@@ -32,6 +32,9 @@ var run_enabled: bool = true
 var run_status: RunStatus = RunStatus.IDLE
 var _status_label: Label
 var _enabled_check: CheckBox
+var _delete_button: Button
+var _title_editor: LineEdit
+var _title_editing: bool = false
 var _titlebar_style: StyleBoxFlat
 var _titlebar_selected_style: StyleBoxFlat
 
@@ -85,6 +88,127 @@ func _ensure_titlebar_controls() -> void:
         titlebar.add_child(_enabled_check)
         _sync_enabled_check()
 
+    if _delete_button == null:
+        _delete_button = Button.new()
+        _delete_button.name = "DeleteNode"
+        _delete_button.text = "×"
+        _delete_button.tooltip_text = "删除节点"
+        _delete_button.focus_mode = Control.FOCUS_NONE
+        _delete_button.flat = true
+        _delete_button.custom_minimum_size = Vector2(22, 0)
+        _delete_button.pressed.connect(_on_delete_pressed)
+        titlebar.add_child(_delete_button)
+
+    _bind_title_label()
+    _sync_delete_button()
+
+
+func _bind_title_label() -> void:
+    var title_label := _builtin_title_label()
+    if title_label == null:
+        return
+    if title_label.has_meta("title_edit_bound"):
+        return
+    title_label.set_meta("title_edit_bound", true)
+    title_label.mouse_filter = Control.MOUSE_FILTER_STOP
+    title_label.gui_input.connect(_on_title_label_gui_input)
+
+
+func _builtin_title_label() -> Label:
+    var titlebar := get_titlebar_hbox()
+    if titlebar == null:
+        return null
+    for child in titlebar.get_children():
+        if child is Label and child != _status_label:
+            return child as Label
+    return null
+
+
+func _on_title_label_gui_input(event: InputEvent) -> void:
+    if event is InputEventMouseButton:
+        var mouse := event as InputEventMouseButton
+        if mouse.button_index == MOUSE_BUTTON_LEFT and mouse.double_click and mouse.pressed:
+            _begin_title_edit()
+
+
+func _begin_title_edit() -> void:
+    if _title_editing:
+        return
+    var titlebar := get_titlebar_hbox()
+    var title_label := _builtin_title_label()
+    if titlebar == null or title_label == null:
+        return
+
+    if _title_editor == null:
+        _title_editor = LineEdit.new()
+        _title_editor.name = "TitleEditor"
+        _title_editor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        _title_editor.text_submitted.connect(_commit_title_edit)
+        _title_editor.focus_exited.connect(_commit_title_edit)
+
+    _title_editing = true
+    _title_editor.text = title
+    title_label.visible = false
+    if _title_editor.get_parent() != titlebar:
+        titlebar.add_child(_title_editor)
+        titlebar.move_child(_title_editor, title_label.get_index())
+    _title_editor.visible = true
+    _title_editor.grab_focus()
+    _title_editor.select_all()
+
+
+func _commit_title_edit(_new_text: Variant = null) -> void:
+    if not _title_editing or _title_editor == null:
+        return
+
+    _title_editing = false
+    var title_label := _builtin_title_label()
+    var new_title := _title_editor.text.strip_edges()
+    if new_title.is_empty():
+        new_title = _fallback_title()
+    title = new_title
+    _title_editor.visible = false
+    if title_label:
+        title_label.visible = true
+
+    var graph_edit := get_parent()
+    if graph_edit != null and graph_edit.has_method("schedule_save"):
+        graph_edit.schedule_save()
+
+
+func _fallback_title() -> String:
+    var template_name := str(get_meta("template_name", ""))
+    if not template_name.is_empty():
+        var entry := GameState.get_node_entry(template_name)
+        if not entry.is_empty():
+            return str(entry.get("label", template_name))
+    return name
+
+
+func _can_delete() -> bool:
+    return not GameState.is_system_node_name(str(get_meta("template_name", "")))
+
+
+func _sync_delete_button() -> void:
+    if _delete_button:
+        _delete_button.visible = _can_delete()
+
+
+func _on_delete_pressed() -> void:
+    if not _can_delete():
+        return
+
+    var graph_edit := get_parent()
+    if graph_edit == null:
+        return
+    if graph_edit.has_method("is_restoring") and graph_edit.is_restoring():
+        return
+
+    graph_edit.remove_child(self)
+    queue_free()
+    if graph_edit.has_method("schedule_save"):
+        graph_edit.schedule_save()
+
 
 func _sync_enabled_check() -> void:
     if _enabled_check:
@@ -136,14 +260,12 @@ func _draw_port(_slot_index: int, port_position: Vector2i, left: bool, color: Co
 
     var points := PackedVector2Array()
     if left:
-        # 输入端口：三角形角朝内（指向节点内部）
         points = PackedVector2Array([
             center + Vector2(half_width, 0.0),
             center + Vector2(-half_width, half_height),
             center + Vector2(-half_width, -half_height),
         ])
     else:
-        # 输出端口：三角形角朝外（指向节点外部）
         points = PackedVector2Array([
             center + Vector2(half_width, 0.0),
             center + Vector2(-half_width, half_height),

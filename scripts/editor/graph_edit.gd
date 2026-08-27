@@ -14,20 +14,24 @@ enum Slot {
     OPERATION_CODE,
     DATA,
     QUEUE,
+    UNION,
     UINT8,
     UINT16,
     UINT32,
     UINT64,
+    PAGE_DATA,
 }
 
 const SLOT_COLORS: Dictionary = {
     Slot.OPERATION_CODE: "#F59E0B",
     Slot.DATA: "#A855F7",
     Slot.QUEUE: "#14B8A6",
+    Slot.UNION: "#EC4899",
     Slot.UINT8: "#86EFAC",
     Slot.UINT16: "#38BDF8",
     Slot.UINT32: "#818CF8",
     Slot.UINT64: "#3B82F6",
+    Slot.PAGE_DATA: "#F97316",
 }
 
 const UINT_SLOT_WIDTHS: Dictionary = {
@@ -39,7 +43,8 @@ const UINT_SLOT_WIDTHS: Dictionary = {
 
 const node_style = preload("res://node/node_style.tres")
 # 端口两侧留白，避免点到 Label/输入框时抢走连线热区、误触发拖动节点
-const ROW_PORT_SIDE_MARGIN := 28
+const ROW_PORT_SIDE_MARGIN := 28 # 与 BaseNode.BODY_SIDE_MARGIN 保持一致
+const ROW_LABEL_MIN_WIDTH := 72
 const PORT_HOTZONE_INNER := 32
 const PORT_HOTZONE_OUTER := 40
 const SYSTEM_NODE_POSITIONS := {
@@ -70,6 +75,8 @@ func _ready() -> void:
     add_valid_connection_type(Slot.QUEUE, Slot.DATA)
     add_valid_connection_type(Slot.DATA, Slot.QUEUE)
     _register_uint_widening_connections()
+    _register_uint_to_data_connections()
+    _register_union_connections()
 
     add_theme_constant_override("port_hotzone_inner_extent", PORT_HOTZONE_INNER)
     add_theme_constant_override("port_hotzone_outer_extent", PORT_HOTZONE_OUTER)
@@ -83,6 +90,25 @@ func _register_uint_widening_connections() -> void:
         for to_slot in uint_slots:
             if int(UINT_SLOT_WIDTHS.get(from_slot, 0)) < int(UINT_SLOT_WIDTHS.get(to_slot, 0)):
                 add_valid_connection_type(from_slot, to_slot)
+
+
+func _register_uint_to_data_connections() -> void:
+    for from_slot in [Slot.UINT8, Slot.UINT16, Slot.UINT32, Slot.UINT64]:
+        add_valid_connection_type(from_slot, Slot.DATA)
+    add_valid_connection_type(Slot.OPERATION_CODE, Slot.DATA)
+
+
+func _register_union_connections() -> void:
+    for from_slot in [
+        Slot.DATA,
+        Slot.OPERATION_CODE,
+        Slot.PAGE_DATA,
+        Slot.UINT8,
+        Slot.UINT16,
+        Slot.UINT32,
+        Slot.UINT64,
+    ]:
+        add_valid_connection_type(from_slot, Slot.UNION)
 
 
 func is_restoring() -> bool:
@@ -228,6 +254,7 @@ func run_all() -> void:
     TaskTrigger.reevaluate([
         TaskTrigger.AFTER_VD_READ,
         TaskTrigger.AFTER_VF_READ,
+        TaskTrigger.AFTER_VF_WRITE,
     ], self)
 
     _is_running = false
@@ -405,6 +432,7 @@ func _execute_graph_node(graph_node: GraphNode, results: Dictionary) -> Variant:
     _set_graph_run_status(graph_node, QuestGraphNode.RunStatus.RUNNING)
     var node: BaseNode = content as BaseNode
     var inputs: Dictionary = _collect_run_inputs(graph_node, results)
+    var node_type := str(graph_node.get_meta("node_type", ""))
     var spend_ms := node.get_spend()
     await node.play_spend()
     _add_run_spend(spend_ms)
@@ -414,7 +442,6 @@ func _execute_graph_node(graph_node: GraphNode, results: Dictionary) -> Variant:
     results[String(graph_node.name)] = result
     _set_graph_run_status(graph_node, QuestGraphNode.RunStatus.DONE)
 
-    var node_type: String = str(graph_node.get_meta("node_type", ""))
     if node_type == "Disk":
         TaskTrigger.handle(TaskTrigger.AFTER_DISK_RUN, self)
     return result
@@ -471,6 +498,8 @@ func _compute_execution_order(closure: Dictionary) -> Array:
         adjacency[from_name].append(to_name)
         in_degree[to_name] = int(in_degree[to_name]) + 1
 
+    _apply_file_page_input_order_constraints(closure, in_degree, adjacency)
+
     var ready_queue: Array[String] = []
     for node_name in closure.keys():
         if int(in_degree[node_name]) == 0:
@@ -495,6 +524,66 @@ func _compute_execution_order(closure: Dictionary) -> Array:
                 order.append(graph_node)
 
     return order
+
+
+## 同一 FilePage 的上游节点按 In 1 → In 2 → … 顺序串行执行。
+func _apply_file_page_input_order_constraints(
+    closure: Dictionary,
+    in_degree: Dictionary,
+    adjacency: Dictionary
+) -> void:
+    for node_name in closure.keys():
+        var graph_node: GraphNode = closure[node_name]
+        if str(graph_node.get_meta("node_type", "")) != "FilePage":
+            continue
+
+        var base := _base_node_of(graph_node)
+        if base == null:
+            continue
+
+        var count := clampi(int(base.data.get("input_count", 1)), 1, 16)
+        var prev_source := ""
+        for input_index in count:
+            var slot_index := FilePageNode.FIRST_INPUT_SLOT + input_index
+            var source_name := _find_connected_source_for_slot(graph_node, slot_index)
+            if source_name.is_empty() or not closure.has(source_name):
+                continue
+            if not prev_source.is_empty() and prev_source != source_name:
+                _add_execution_edge(prev_source, source_name, in_degree, adjacency)
+            prev_source = source_name
+
+
+func _find_connected_source_for_slot(file_page: GraphNode, slot_index: int) -> String:
+    var target_port := -1
+    for port in file_page.get_input_port_count():
+        if file_page.get_input_port_slot(port) == slot_index:
+            target_port = port
+            break
+    if target_port == -1:
+        return ""
+
+    var file_page_name := String(file_page.name)
+    for conn in get_connection_list():
+        if String(conn.get("to_node", conn.get("to"))) != file_page_name:
+            continue
+        if int(conn.get("to_port", 0)) != target_port:
+            continue
+        return String(conn.get("from_node", conn.get("from")))
+    return ""
+
+
+func _add_execution_edge(
+    from_name: String,
+    to_name: String,
+    in_degree: Dictionary,
+    adjacency: Dictionary
+) -> void:
+    if from_name == to_name:
+        return
+    if to_name in adjacency[from_name]:
+        return
+    adjacency[from_name].append(to_name)
+    in_degree[to_name] = int(in_degree[to_name]) + 1
 
 
 func _collect_upstream_closure(target: GraphNode) -> Dictionary:
@@ -701,6 +790,7 @@ func export_snapshot() -> Dictionary:
         var node_entry := {
             "instance_id": String(graph_node.name),
             "template_name": str(graph_node.get_meta("template_name", graph_node.name)),
+            "display_title": graph_node.title,
             "position": {
                 "x": graph_node.position_offset.x,
                 "y": graph_node.position_offset.y,
@@ -762,6 +852,8 @@ func load_snapshot() -> void:
             )
             if created == null:
                 continue
+            if node_data.has("display_title"):
+                created.title = str(node_data.get("display_title", ""))
 
         for conn in snapshot.get("connections", []):
             if not conn is Dictionary:
@@ -890,7 +982,8 @@ func _add_row_from_config(node: GraphNode, row: Dictionary) -> void:
         str(row.get("row_name", "")),
         op_list,
         row.get("row_options", []),
-        str(row.get("row_number_input", ""))
+        str(row.get("row_number_input", "")),
+        str(row.get("row_text_input", ""))
     )
 
 
@@ -900,19 +993,29 @@ func create_node_row(
     row_name: String,
     op_list: Array,
     row_options: Variant = [],
-    row_number_input: String = ""
+    row_number_input: String = "",
+    row_text_input: String = ""
 ) -> int:
     var operation := _resolve_row_operation(op_list)
-    var row_control := _create_row_control(row_name, row_options, row_number_input, operation)
-    _bind_row_control_save(row_control)
-    var wrapper := _wrap_row_control(row_control)
+    var label_text := _resolve_row_label_text(
+        row_name,
+        row_options,
+        row_number_input,
+        row_text_input
+    )
+    var row_field := _create_row_field(
+        row_options,
+        row_number_input,
+        row_text_input,
+        operation
+    )
+    if row_field != null:
+        _bind_row_control_save(row_field)
+    var wrapper := _wrap_labeled_row(label_text, row_field)
     var slot_index := maxi(1, row_number)
 
     while node.get_child_count() < slot_index:
-        var placeholder := _wrap_row_control(Label.new())
-        var placeholder_label := placeholder.get_child(0) as Label
-        placeholder_label.text = ""
-        placeholder_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        var placeholder := _wrap_labeled_row("", null)
         node.add_child(placeholder)
         var placeholder_index := node.get_child_count() - 1
         node.set_slot_enabled_left(placeholder_index, false)
@@ -921,8 +1024,9 @@ func create_node_row(
     if slot_index < node.get_child_count():
         var existing := node.get_child(slot_index)
         if existing:
+            _clear_slot_ports(node, slot_index)
             node.remove_child(existing)
-            existing.queue_free()
+            existing.free()
 
     if slot_index == node.get_child_count():
         node.add_child(wrapper)
@@ -948,7 +1052,28 @@ func create_node_row(
     return slot_index
 
 
+func remove_slot_row(node: GraphNode, slot_index: int) -> void:
+    if node == null or slot_index < 1 or slot_index >= node.get_child_count():
+        return
+    _clear_slot_ports(node, slot_index)
+    var child := node.get_child(slot_index)
+    node.remove_child(child)
+    child.free()
+
+
+func _clear_slot_ports(node: GraphNode, slot_index: int) -> void:
+    _disconnect_slot(node, slot_index, false)
+    _disconnect_slot(node, slot_index, true)
+    node.set_slot_enabled_left(slot_index, false)
+    node.set_slot_enabled_right(slot_index, false)
+
+
 func _bind_row_control_save(control: Control) -> void:
+    if control is HBoxContainer:
+        for child in control.get_children():
+            if child is Control:
+                _bind_row_control_save(child as Control)
+        return
     if control is SpinBox:
         (control as SpinBox).value_changed.connect(func(_value: float) -> void:
             schedule_save()
@@ -957,32 +1082,105 @@ func _bind_row_control_save(control: Control) -> void:
         (control as OptionButton).item_selected.connect(func(_index: int) -> void:
             schedule_save()
         )
+    elif control is LineEdit:
+        (control as LineEdit).text_changed.connect(func(_text: String) -> void:
+            schedule_save()
+        )
 
 
-func _wrap_row_control(control: Control) -> MarginContainer:
+func _resolve_row_label_text(
+    row_name: String,
+    row_options: Variant,
+    row_number_input: String,
+    row_text_input: String
+) -> String:
+    if not row_name.is_empty():
+        return row_name
+    if not row_number_input.is_empty():
+        return row_number_input
+    if not row_text_input.is_empty():
+        return row_text_input
+    if row_options is Array and not (row_options as Array).is_empty():
+        return "Op"
+    return ""
+
+
+## Slot 行：左 Label、右表单；左右留白与内容区 BaseNode.BODY_SIDE_MARGIN 对齐。
+func _wrap_labeled_row(label_text: String, field: Control) -> MarginContainer:
     var margin := MarginContainer.new()
     margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
     margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     margin.add_theme_constant_override("margin_left", ROW_PORT_SIDE_MARGIN)
     margin.add_theme_constant_override("margin_right", ROW_PORT_SIDE_MARGIN)
-    control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    if control is Label:
-        control.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    elif control is OptionButton or control is SpinBox:
-        control.custom_minimum_size = Vector2(0, 0)
-    margin.add_child(control)
+
+    var row := HBoxContainer.new()
+    row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    row.add_theme_constant_override("separation", 8)
+
+    var name_label := Label.new()
+    name_label.text = label_text
+    name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+    name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    name_label.custom_minimum_size = Vector2(ROW_LABEL_MIN_WIDTH, 0)
+    name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    name_label.set_meta("row_name_label", true)
+    row.add_child(name_label)
+
+    if field != null:
+        field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        field.set_meta("row_field", true)
+        row.add_child(field)
+    else:
+        var value_label := Label.new()
+        value_label.text = ""
+        value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+        value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+        value_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        value_label.set_meta("row_field", true)
+        row.add_child(value_label)
+
+    margin.add_child(row)
     return margin
 
 
-func _create_row_control(
-    row_name: String,
+func _create_row_field(
     row_options: Variant,
     row_number_input: String,
+    row_text_input: String,
     operation: Slot
 ) -> Control:
-    if row_options is Array and not row_options.is_empty():
+    var has_options := row_options is Array and not (row_options as Array).is_empty()
+    var has_number := not row_number_input.is_empty()
+
+    if has_options and has_number:
+        var container := HBoxContainer.new()
+        container.add_theme_constant_override("separation", 6)
+        container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
         var option_button := OptionButton.new()
-        for i in row_options.size():
+        for i in (row_options as Array).size():
+            option_button.add_item(str(row_options[i]), i)
+        option_button.selected = 0
+        option_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        container.add_child(option_button)
+
+        var spin_box := SpinBox.new()
+        spin_box.min_value = 0
+        spin_box.max_value = 65535.0
+        spin_box.custom_minimum_size = Vector2(72, 0)
+        spin_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        var spin_line_edit := spin_box.get_line_edit()
+        spin_line_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
+        container.add_child(spin_box)
+
+        container.set_meta("row_field", true)
+        return container
+
+    if has_options:
+        var option_button := OptionButton.new()
+        for i in (row_options as Array).size():
             option_button.add_item(str(row_options[i]), i)
         option_button.selected = 0
         return option_button
@@ -996,14 +1194,16 @@ func _create_row_control(
             _:
                 spin_box.max_value = 100
         var line_edit := spin_box.get_line_edit()
-        line_edit.placeholder_text = row_number_input
         line_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
         return spin_box
 
-    var label := Label.new()
-    label.text = row_name
-    label.horizontal_alignment = HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
-    return label
+    if not row_text_input.is_empty():
+        var text_input := LineEdit.new()
+        text_input.alignment = HORIZONTAL_ALIGNMENT_LEFT
+        text_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        return text_input
+
+    return null
 
 
 func _get_slot_color(slot: Slot) -> Color:
@@ -1068,6 +1268,8 @@ func _parse_operation(op_name: String) -> Slot:
             return Slot.DATA
         "QUEUE":
             return Slot.QUEUE
+        "UNION":
+            return Slot.UNION
         "UINT8":
             return Slot.UINT8
         "UINT16":
@@ -1076,6 +1278,8 @@ func _parse_operation(op_name: String) -> Slot:
             return Slot.UINT32
         "UINT64", "INT":
             return Slot.UINT64
+        "PAGE_DATA":
+            return Slot.PAGE_DATA
         _:
             EditorLog.warn("Unknown operation: %s" % op_name)
             return Slot.OPERATION_CODE

@@ -2,7 +2,6 @@ extends VBoxContainer
 class_name NodeActionBar
 
 signal display_clicked
-signal delete_clicked
 signal help_clicked
 
 var display_dialog: DisplayDialog = null
@@ -12,12 +11,20 @@ var _spend_tween: Tween
 
 
 func _ready() -> void:
+    size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _bind_display_dialog()
     if progress_bar:
         progress_bar.min_value = 0
         progress_bar.max_value = 100
         progress_bar.value = 0
         progress_bar.show_percentage = false
+        progress_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var button_row := get_node_or_null("HBoxContainer") as HBoxContainer
+    if button_row:
+        button_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        for child in button_row.get_children():
+            if child is Button:
+                (child as Button).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 
 func set_button_visible(button_name: String, _is_visible: bool) -> void:
@@ -67,10 +74,6 @@ func _bind_display_dialog() -> void:
     if scene_root == null:
         return
     display_dialog = scene_root.get_node_or_null("DisplayDialog") as DisplayDialog
-
-
-func _on_delete_pressed() -> void:
-    delete_clicked.emit()
 
 
 func _on_display_pressed() -> void:

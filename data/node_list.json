@@ -71,6 +71,7 @@
             "slots": [
                 {
                     "row_number": 1.0,
+                    "row_name": "Op",
                     "row_options": [
                         "READ",
                         "WRITE",
@@ -85,6 +86,7 @@
                 },
                 {
                     "row_number": 2.0,
+                    "row_name": "Data",
                     "row_number_input": "Data",
                     "op_list": [
                         {
@@ -99,6 +101,7 @@
                 },
                 {
                     "row_number": 3.0,
+                    "row_name": "Address",
                     "row_number_input": "Address",
                     "op_list": [
                         {
@@ -321,23 +324,39 @@
         "spend": 200,
         "attributes": {
             "title": "文件页",
-            "subtitle": "page 0 · off 0 · len 0",
+            "subtitle": "page 0 · inputs 1",
+            "slots": []
+        }
+    },
+    {
+        "name": "WriteData",
+        "type": "WriteData",
+        "label": "Write Data",
+        "category": "File",
+        "scene": "res://node/write_data_node.tscn",
+        "unique": false,
+        "spend": 100,
+        "attributes": {
+            "title": "页写数据",
+            "subtitle": "DATA",
+            "slots": []
+        }
+    },
+    {
+        "name": "WriteChecksum",
+        "type": "WriteChecksum",
+        "label": "Write Checksum",
+        "category": "File",
+        "scene": "res://node/write_checksum_node.tscn",
+        "unique": false,
+        "spend": 100,
+        "attributes": {
+            "title": "写校验和",
+            "subtitle": "page 0 · offset 20",
             "slots": [
                 {
                     "row_number": 1.0,
-                    "row_options": [
-                        "READ",
-                        "WRITE"
-                    ],
-                    "op_list": [
-                        {
-                            "operation": "OPERATION_CODE",
-                            "type": "INPUT"
-                        }
-                    ]
-                },
-                {
-                    "row_number": 2.0,
+                    "row_name": "Page",
                     "row_number_input": "Page",
                     "op_list": [
                         {
@@ -347,36 +366,12 @@
                     ]
                 },
                 {
-                    "row_number": 3.0,
-                    "row_name": "Offset",
+                    "row_number": 2.0,
+                    "row_name": "Value",
                     "op_list": [
                         {
-                            "operation": "UINT16",
-                            "type": "INPUT"
-                        }
-                    ]
-                },
-                {
-                    "row_number": 4.0,
-                    "row_name": "Data",
-                    "op_list": [
-                        {
-                            "operation": "DATA",
-                            "type": "INPUT"
-                        },
-                        {
-                            "operation": "DATA",
+                            "operation": "UINT32",
                             "type": "OUTPUT"
-                        }
-                    ]
-                },
-                {
-                    "row_number": 5.0,
-                    "row_name": "Length",
-                    "op_list": [
-                        {
-                            "operation": "UINT16",
-                            "type": "INPUT"
                         }
                     ]
                 }

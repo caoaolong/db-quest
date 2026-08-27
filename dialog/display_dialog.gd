@@ -4,6 +4,7 @@ class_name DisplayDialog
 enum DataType {
     STRING,
     BINARY,
+    TABLE,
 }
 
 const BINARY_PAGE_SIZE := 512
@@ -19,6 +20,7 @@ const BINARY_CONTENT_WIDTH := HEX_CELL_WIDTH * 4 + 12 + BINARY_BYTES_PER_LINE * 
 @onready var binary_page_info: Label = $VBoxContainer/TabContainer/BinaryPanel/VBoxContainer/Pager/PageInfo
 @onready var binary_prev_button: Button = $VBoxContainer/TabContainer/BinaryPanel/VBoxContainer/Pager/Prev
 @onready var binary_next_button: Button = $VBoxContainer/TabContainer/BinaryPanel/VBoxContainer/Pager/Next
+@onready var table_rows: VBoxContainer = $VBoxContainer/TabContainer/TablePanel/TableRows
 @onready var display_size: Label = $VBoxContainer/HBoxContainer/Size
 
 var _mono_font: Font = preload("res://fonts/cjk.ttf")
@@ -38,12 +40,70 @@ func load_data(data: Variant, data_type: DataType = DataType.STRING) -> void:
             _load_string_data(str(data))
         DataType.BINARY:
             _load_binary_data(data)
+        DataType.TABLE:
+            _load_table_data(data)
 
 
 func _load_string_data(data: String) -> void:
     text_edit.text = data
     display_size.text = _format_byte_size(data.to_utf8_buffer().size())
     _fit_string_panel(data)
+
+
+func _load_table_data(data: Variant) -> void:
+    for child in table_rows.get_children():
+        child.free()
+
+    var rows: Array = []
+    var table_title := ""
+    if data is Dictionary:
+        var source := data as Dictionary
+        table_title = str(source.get("title", ""))
+        var raw_rows: Variant = source.get("rows", [])
+        if raw_rows is Array:
+            rows = raw_rows as Array
+    elif data is Array:
+        rows = data as Array
+
+    for entry in rows:
+        if not entry is Dictionary:
+            continue
+        var row := entry as Dictionary
+        table_rows.add_child(_create_table_row(
+            str(row.get("label", "")),
+            str(row.get("value", ""))
+        ))
+
+    if table_rows.get_child_count() == 0:
+        table_rows.add_child(_create_table_row("提示", "暂无字段描述"))
+
+    display_size.text = table_title if not table_title.is_empty() else "%d 项" % table_rows.get_child_count()
+    _fit_table_panel()
+
+
+func _create_table_row(label_text: String, value_text: String) -> HBoxContainer:
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 12)
+
+    var label := Label.new()
+    label.text = "%s：" % label_text
+    label.custom_minimum_size = Vector2(180, 0)
+    label.add_theme_font_override("font", _mono_font)
+    row.add_child(label)
+
+    var value := Label.new()
+    value.text = value_text
+    value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    value.add_theme_font_override("font", _mono_font)
+    row.add_child(value)
+    return row
+
+
+func _fit_table_panel() -> void:
+    var row_count := maxi(table_rows.get_child_count(), 1)
+    var separation := table_rows.get_theme_constant("separation")
+    var height := float(row_count * 28 + maxi(row_count - 1, 0) * separation)
+    set_clamped_content_size(table_rows, Vector2(480, height))
 
 
 func _load_binary_data(data: Variant) -> void:

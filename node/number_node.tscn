@@ -12,11 +12,31 @@ layout_mode = 2
 [node name="NodeActionBar" parent="VBoxContainer" unique_id=1300589146 instance=ExtResource("1_son88")]
 layout_mode = 2
 
-[node name="TypeOption" type="OptionButton" parent="VBoxContainer" unique_id=1787802970]
+[node name="TypeRow" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="VBoxContainer/TypeRow"]
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+text = "Type"
+vertical_alignment = 1
+
+[node name="TypeOption" type="OptionButton" parent="VBoxContainer/TypeRow" unique_id=1787802970]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SpinBox" type="SpinBox" parent="VBoxContainer" unique_id=1113978654]
+[node name="ValueRow" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="VBoxContainer/ValueRow"]
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+text = "Value"
+vertical_alignment = 1
+
+[node name="SpinBox" type="SpinBox" parent="VBoxContainer/ValueRow" unique_id=1113978654]
 layout_mode = 2
 size_flags_horizontal = 3
 max_value = 9.223372e+18

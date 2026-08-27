@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://qerko33x7sgk" path="res://node/node_action_bar.gd" id="1_f1rk2"]
 
 [node name="NodeActionBar" type="VBoxContainer" unique_id=1832665264]
+size_flags_horizontal = 3
 offset_right = 207.0
 offset_bottom = 136.0
 script = ExtResource("1_f1rk2")
@@ -10,23 +11,22 @@ script = ExtResource("1_f1rk2")
 [node name="ProgressBar" type="ProgressBar" parent="." unique_id=1072663584]
 custom_maximum_size = Vector2(-1, 10)
 layout_mode = 2
+size_flags_horizontal = 3
 show_percentage = false
 
 [node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1676999184]
 layout_mode = 2
-
-[node name="Delete" type="Button" parent="HBoxContainer" unique_id=1952599860]
-layout_mode = 2
-text = "Delete"
+size_flags_horizontal = 3
 
 [node name="Display" type="Button" parent="HBoxContainer" unique_id=654982439]
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Display"
 
 [node name="Help" type="Button" parent="HBoxContainer" unique_id=2065330903]
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Help"
 
-[connection signal="pressed" from="HBoxContainer/Delete" to="." method="_on_delete_pressed"]
 [connection signal="pressed" from="HBoxContainer/Display" to="." method="_on_display_pressed"]
 [connection signal="pressed" from="HBoxContainer/Help" to="." method="_on_help_pressed"]

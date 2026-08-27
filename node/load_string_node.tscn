@@ -15,8 +15,17 @@ layout_mode = 2
 [node name="Label" type="Label" parent="VBoxContainer"]
 layout_mode = 2
 
-[node name="LineEdit" type="LineEdit" parent="VBoxContainer"]
+[node name="StringRow" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="FieldLabel" type="Label" parent="VBoxContainer/StringRow"]
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+text = "String"
+vertical_alignment = 1
+
+[node name="LineEdit" type="LineEdit" parent="VBoxContainer/StringRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "READ"
-alignment = 1

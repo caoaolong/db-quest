@@ -7,7 +7,7 @@ extends BaseNode
 }
 """
 
-@onready var chunk_size_input: SpinBox = $VBoxContainer/SpinBox
+@onready var chunk_size_input: SpinBox = $VBoxContainer/ChunkRow/SpinBox
 
 
 func _ready() -> void:
@@ -78,17 +78,19 @@ func _update_index_display(index: int) -> void:
     if graph_node == null:
         return
 
-    var row_control := _get_row_control(graph_node, 3)
-    if not row_control is Label:
-        return
+    var name_label := _get_row_label(graph_node, 3)
+    if name_label != null:
+        if not name_label.has_meta("row_name"):
+            var base := name_label.text.strip_edges()
+            if base.is_empty():
+                base = "Index"
+            name_label.set_meta("row_name", base)
+        name_label.text = str(name_label.get_meta("row_name", "Index"))
 
-    var label := row_control as Label
-    if not label.has_meta("row_name"):
-        label.set_meta("row_name", label.text)
-
-    var row_name := str(label.get_meta("row_name", "Index"))
-    label.text = "%s  %d" % [row_name, index]
-    label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+    var value_label := _get_row_control(graph_node, 3)
+    if value_label is Label:
+        (value_label as Label).text = str(index)
+        (value_label as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 
 
 func remember_split(source: Variant, chunks: Array) -> void:

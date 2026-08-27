@@ -1,0 +1,49 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://node/write_data_node.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://diupwx6dksdpq" path="res://node/node_action_bar.tscn" id="2_action_bar"]
+
+[node name="WriteDataNode" type="PanelContainer"]
+custom_minimum_size = Vector2(220, 0)
+offset_right = 220.0
+offset_bottom = 120.0
+script = ExtResource("1_script")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="NodeActionBar" parent="VBoxContainer" instance=ExtResource("2_action_bar")]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="TypeRow" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="FieldLabel" type="Label" parent="VBoxContainer/TypeRow"]
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+text = "Type"
+vertical_alignment = 1
+
+[node name="TypeOption" type="OptionButton" parent="VBoxContainer/TypeRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ValueRow" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="FieldLabel" type="Label" parent="VBoxContainer/ValueRow"]
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+text = "Value"
+vertical_alignment = 1
+
+[node name="SpinBox" type="SpinBox" parent="VBoxContainer/ValueRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 65535.0
+alignment = 1

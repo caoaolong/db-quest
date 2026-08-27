@@ -1,0 +1,10 @@
+[
+    { "range": "0:3", "label": "MAGIC Number", "format": "ascii" },
+    { "range": "4:7", "label": "Database Version", "format": "version" },
+    { "range": "8:11", "label": "Page Size", "format": "uint" },
+    { "range": "12:15", "label": "Page Count", "format": "uint" },
+    { "range": "16:19", "label": "Free List Head", "format": "uint" },
+    { "range": "20:23", "label": "Checksum", "format": "hex" },
+    { "range": "24", "label": "Type", "format": "uint" },
+    { "range": "25", "label": "Flags", "format": "uint" }
+]

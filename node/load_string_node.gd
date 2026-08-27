@@ -7,7 +7,7 @@ extends BaseNode
 }
 """
 
-@onready var value_input: LineEdit = $VBoxContainer/LineEdit
+@onready var value_input: LineEdit = $VBoxContainer/StringRow/LineEdit
 
 
 func _ready() -> void:

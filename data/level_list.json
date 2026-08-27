@@ -123,7 +123,7 @@
     },
     {
         "level": 4,
-        "name": "文件页",
+        "name": "元数据页",
         "load_previous": false,
         "difficulty": 1,
         "help": "res://docs/meta_layout.txt",
@@ -133,31 +133,20 @@
             "DataSplit",
             "DataMerge",
             "File",
-            "FilePage"
+            "FilePage",
+            "WriteData",
+            "WriteChecksum"
         ],
-        "files": {
-            "data": "res://data/6K.txt"
-        },
         "tasks": [
             {
-                "title": "从文件页指定位置读取",
-                "description": "将「data」写入第「0」个文件页",
+                "title": "完成MetaPage的构建",
+                "description": "构建完整的元数据页",
                 "reward": {
                     "EXP": 10000,
                     "COIN": 100
                 },
                 "trigger": "after(VF->write)",
-                "goal": "VF[0] == ${files.data}"
-            },
-            {
-                "title": "向文件页指定位置写入",
-                "description": "使用「READ」将已写入的文件页完整读出",
-                "reward": {
-                    "EXP": 10000,
-                    "COIN": 100
-                },
-                "trigger": "after(VF->read)",
-                "goal": "VF[0:] == ${files.data}"
+                "goal": "VF[0] is meta"
             }
         ]
     }

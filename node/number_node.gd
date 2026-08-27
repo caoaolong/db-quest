@@ -16,8 +16,8 @@ const TYPE_OPTIONS := [
     UintCodec.TYPE_UINT64,
 ]
 
-@onready var value_input: SpinBox = $VBoxContainer/SpinBox
-@onready var type_input: OptionButton = $VBoxContainer/TypeOption
+@onready var value_input: SpinBox = $VBoxContainer/ValueRow/SpinBox
+@onready var type_input: OptionButton = $VBoxContainer/TypeRow/TypeOption
 
 
 func _ready() -> void:
@@ -81,14 +81,14 @@ func _selected_type_name() -> String:
     return UintCodec.normalize_type(type_input.get_item_text(type_input.selected))
 
 
-func _select_type(type_name: String, emit_signal: bool) -> void:
+func _select_type(type_name: String, should_emit: bool) -> void:
     if type_input == null:
         return
     var normalized := UintCodec.normalize_type(type_name)
     var index := TYPE_OPTIONS.find(normalized)
     if index < 0:
         index = TYPE_OPTIONS.size() - 1
-    if emit_signal:
+    if should_emit:
         type_input.selected = index
     else:
         type_input.set_block_signals(true)

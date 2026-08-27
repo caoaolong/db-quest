@@ -15,12 +15,6 @@ func _ready() -> void:
     call_deferred("_sync_controls_from_data")
 
 
-func _configure_action_bar() -> void:
-    if action == null:
-        return
-    action.set_button_visible("Delete", false)
-
-
 func set_subtitle(_value: String) -> void:
     pass
 
@@ -96,8 +90,8 @@ func _update_file_display() -> void:
 
     var entries := GameState.get_level_file_entries()
     for slot_index in range(1, graph_node.get_child_count()):
-        var row_control := _get_row_control(graph_node, slot_index)
-        if not row_control is Label:
+        var label := _get_row_label(graph_node, slot_index)
+        if label == null:
             continue
 
         var file_index := slot_index - 1
@@ -107,7 +101,6 @@ func _update_file_display() -> void:
         var entry: Dictionary = entries[file_index]
         var file_name := str(entry.get("name", ""))
         var path := str(entry.get("path", "")).strip_edges()
-        var label := row_control as Label
         label.set_meta("row_name", file_name)
         label.text = _format_slot_text(file_name, path)
         label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
