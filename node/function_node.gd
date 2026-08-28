@@ -64,13 +64,13 @@ func _populate_function_option() -> void:
     function_option.set_item_metadata(0, {})
 
     for function_def in GameState.get_all_prefab_functions():
-        var owner := str(function_def.get("owner", ""))
+        var _owner := str(function_def.get("_owner", ""))
         var function_name := str(function_def.get("name", ""))
-        var owner_label := str(function_def.get("owner_label", owner))
+        var owner_label := str(function_def.get("owner_label", _owner))
         var function_label := str(function_def.get("label", function_name))
         function_option.add_item("%s.%s" % [owner_label, function_label])
         function_option.set_item_metadata(function_option.item_count - 1, {
-            "owner": owner,
+            "owner": _owner,
             "name": function_name,
         })
 
@@ -81,15 +81,15 @@ func _select_current_function() -> void:
     _select_function(str(data.get("function_owner", "")), str(data.get("function_name", "")))
 
 
-func _select_function(owner: String, function_name: String) -> void:
+func _select_function(_owner: String, function_name: String) -> void:
     if function_option == null:
         return
     var selected := 0
-    if not owner.is_empty() and not function_name.is_empty():
+    if not _owner.is_empty() and not function_name.is_empty():
         for i in function_option.item_count:
             var meta: Variant = function_option.get_item_metadata(i)
             if meta is Dictionary \
-                    and str(meta.get("owner", "")) == owner \
+                    and str(meta.get("_owner", "")) == _owner \
                     and str(meta.get("name", "")) == function_name:
                 selected = i
                 break
@@ -114,9 +114,9 @@ func _on_function_selected(_index: int) -> void:
 
 
 func _apply_selected_function() -> void:
-    var owner := str(data.get("function_owner", "")).strip_edges()
+    var _owner := str(data.get("function_owner", "")).strip_edges()
     var function_name := str(data.get("function_name", "")).strip_edges()
-    var prefab := GameState.get_node_function(owner, function_name)
+    var prefab := GameState.get_node_function(_owner, function_name)
     if prefab.is_empty():
         set_subtitle("函数签名")
         _rebuild_slots({})
@@ -147,7 +147,7 @@ func _rebuild_slots(prefab: Dictionary) -> void:
     for param in prefab.get("params", []):
         if not param is Dictionary:
             continue
-        var op_list: Array = graph_edit._parse_op_list([{
+        var op_list: Array = graph_edit._parse_op_list([ {
             "operation": str(param.get("type", "DATA")),
             "type": "INPUT",
         }])
@@ -162,7 +162,7 @@ func _rebuild_slots(prefab: Dictionary) -> void:
     for ret in prefab.get("returns", []):
         if not ret is Dictionary:
             continue
-        var op_list: Array = graph_edit._parse_op_list([{
+        var op_list: Array = graph_edit._parse_op_list([ {
             "operation": str(ret.get("type", "DATA")),
             "type": "OUTPUT",
         }])

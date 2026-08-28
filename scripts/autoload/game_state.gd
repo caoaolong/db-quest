@@ -186,17 +186,17 @@ func get_all_prefab_functions(available_only: bool = true) -> Array:
     for item in node_list:
         if not item is Dictionary:
             continue
-        var owner := str(item.get("name", "")).strip_edges()
-        if owner.is_empty() or owner == "Function":
+        var _owner := str(item.get("name", "")).strip_edges()
+        if _owner.is_empty() or _owner == "Function":
             continue
-        if available_only and not is_node_available(owner):
+        if available_only and not is_node_available(_owner):
             continue
-        var owner_label := str(item.get("label", owner)).strip_edges()
+        var owner_label := str(item.get("label", _owner)).strip_edges()
         if owner_label.is_empty():
-            owner_label = owner
-        for function_def in get_node_functions(owner):
+            owner_label = _owner
+        for function_def in get_node_functions(_owner):
             var entry: Dictionary = function_def.duplicate(true)
-            entry["owner"] = owner
+            entry["_owner"] = _owner
             entry["owner_label"] = owner_label
             result.append(entry)
     return result
@@ -491,12 +491,12 @@ func _capitalize_ident(value: String) -> String:
 
 func _normalize_function_entry(item: Variant) -> Dictionary:
     if item is String:
-        var name := _capitalize_ident(str(item))
-        if name.is_empty():
+        var _name := _capitalize_ident(str(item))
+        if _name.is_empty():
             return {}
         return {
-            "name": name,
-            "label": name,
+            "name": _name,
+            "label": _name,
             "params": [],
             "returns": [],
         }

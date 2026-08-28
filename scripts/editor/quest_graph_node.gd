@@ -258,40 +258,40 @@ func _apply_run_status() -> void:
 
 func _draw_port(slot_index: int, port_position: Vector2i, left: bool, color: Color) -> void:
     var center := Vector2(port_position)
-    var half_width := PORT_SIZE.x * 0.5
-    var half_height := PORT_SIZE.y * 0.5
+    var _half_width := PORT_SIZE.x * 0.5
+    var _half_height := PORT_SIZE.y * 0.5
 
     if _is_function_port(slot_index, left):
         var diamond := PackedVector2Array([
-            center + Vector2(0.0, -half_height),
-            center + Vector2(half_width, 0.0),
-            center + Vector2(0.0, half_height),
-            center + Vector2(-half_width, 0.0),
+            center + Vector2(0.0, -_half_height),
+            center + Vector2(_half_width, 0.0),
+            center + Vector2(0.0, _half_height),
+            center + Vector2(-_half_width, 0.0),
         ])
         draw_colored_polygon(diamond, color)
         return
 
     if _is_self_refer_port(slot_index, left):
-        draw_circle(center, mini(half_width, half_height), color)
+        draw_circle(center, minf(_half_width, _half_height), color)
         return
 
     if _is_refer_port(slot_index, left):
-        var square := Rect2(center - Vector2(half_width, half_height), PORT_SIZE)
+        var square := Rect2(center - Vector2(_half_width, _half_height), PORT_SIZE)
         draw_rect(square, color, true)
         return
 
     var points := PackedVector2Array()
     if left:
         points = PackedVector2Array([
-            center + Vector2(half_width, 0.0),
-            center + Vector2(-half_width, half_height),
-            center + Vector2(-half_width, -half_height),
+            center + Vector2(_half_width, 0.0),
+            center + Vector2(-_half_width, _half_height),
+            center + Vector2(-_half_width, -_half_height),
         ])
     else:
         points = PackedVector2Array([
-            center + Vector2(half_width, 0.0),
-            center + Vector2(-half_width, half_height),
-            center + Vector2(-half_width, -half_height),
+            center + Vector2(_half_width, 0.0),
+            center + Vector2(-_half_width, _half_height),
+            center + Vector2(-_half_width, -_half_height),
         ])
 
     draw_colored_polygon(points, color)

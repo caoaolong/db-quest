@@ -35,17 +35,17 @@ func collect_persisted_data() -> Dictionary:
     return data.duplicate(true)
 
 
-func bind_function(owner: String, function_name: String) -> void:
-    data["function_owner"] = owner.strip_edges()
+func bind_function(_owner: String, function_name: String) -> void:
+    data["function_owner"] = _owner.strip_edges()
     data["function_name"] = function_name.strip_edges()
     _apply_bound_function()
     schedule_save()
 
 
 func _apply_bound_function() -> void:
-    var owner := str(data.get("function_owner", "")).strip_edges()
+    var _owner := str(data.get("function_owner", "")).strip_edges()
     var function_name := str(data.get("function_name", "")).strip_edges()
-    var prefab := GameState.get_node_function(owner, function_name)
+    var prefab := GameState.get_node_function(_owner, function_name)
     if prefab.is_empty():
         set_subtitle("适配器")
         _rebuild_slots({})
