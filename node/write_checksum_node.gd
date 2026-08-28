@@ -11,8 +11,8 @@ extends BaseNode
 """
 
 const CHECKSUM_FIELD_LENGTH := 4
-const SLOT_PAGE := 1
-const SLOT_VALUE := 2
+const SLOT_PAGE := 2
+const SLOT_VALUE := 3
 
 @export var title: String = "写校验和"
 

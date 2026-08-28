@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://dsp75ltrhcvm7"]
+
+[ext_resource type="Script" uid="uid://dh1aaptej2soq" path="res://scripts/editor/graph_edit.gd" id="1_2y2pt"]
+
+[node name="GraphEdit" type="GraphEdit" unique_id=923364536]
+size_flags_vertical = 3
+script = ExtResource("1_2y2pt")

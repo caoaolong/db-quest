@@ -266,48 +266,39 @@
         "attributes": {
             "title": "文件",
             "subtitle": "- / -",
-            "slots": [
+            "functions": [
                 {
-                    "row_number": 1.0,
-                    "row_name": "Code",
-                    "op_list": [
+                    "name": "ReadAt",
+                    "params": [
                         {
-                            "operation": "OPERATION_CODE",
-                            "type": "INPUT"
-                        }
-                    ]
-                },
-                {
-                    "row_number": 2.0,
-                    "row_name": "Data",
-                    "op_list": [
-                        {
-                            "operation": "DATA",
-                            "type": "INPUT"
+                            "name": "offset",
+                            "type": "UINT64"
                         },
                         {
-                            "operation": "DATA",
-                            "type": "OUTPUT"
+                            "name": "buf",
+                            "type": "DATA"
                         }
                     ]
                 },
                 {
-                    "row_number": 3.0,
-                    "row_name": "Page",
-                    "op_list": [
+                    "name": "WriteAt",
+                    "params": [
                         {
-                            "operation": "UINT64",
-                            "type": "INPUT"
+                            "name": "offset",
+                            "type": "UINT64"
+                        },
+                        {
+                            "name": "buf",
+                            "type": "DATA"
                         }
                     ]
                 },
                 {
-                    "row_number": 4.0,
-                    "row_name": "Count",
-                    "op_list": [
+                    "name": "Truncate",
+                    "params": [
                         {
-                            "operation": "UINT64",
-                            "type": "INPUT"
+                            "name": "size",
+                            "type": "UINT64"
                         }
                     ]
                 }
@@ -315,9 +306,9 @@
         }
     },
     {
-        "name": "FilePage",
-        "type": "FilePage",
-        "label": "File Page",
+        "name": "Page",
+        "type": "Page",
+        "label": "Page",
         "category": "File",
         "scene": "res://node/file_page_node.tscn",
         "unique": false,
@@ -372,6 +363,84 @@
                         {
                             "operation": "UINT32",
                             "type": "OUTPUT"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "name": "FunctionAdapter",
+        "type": "FunctionAdapter",
+        "label": "函数适配器",
+        "category": "Function",
+        "scene": "res://node/function_adapter_node.tscn",
+        "unique": false,
+        "spend": 0,
+        "attributes": {
+            "title": "函数适配器",
+            "subtitle": "适配器"
+        }
+    },
+    {
+        "name": "Database",
+        "type": "Database",
+        "label": "数据库",
+        "category": "Database",
+        "scene": "res://node/component_node.tscn",
+        "unique": true,
+        "spend": 0,
+        "attributes": {
+            "title": "数据库",
+            "subtitle": "类",
+            "slots": [
+                {
+                    "row_number": 1.0,
+                    "row_name": "File",
+                    "op_list": [
+                        {
+                            "operation": "REFER(File)",
+                            "type": "INPUT"
+                        }
+                    ]
+                },
+                {
+                    "row_number": 2.0,
+                    "row_name": "Flags",
+                    "op_list": [
+                        {
+                            "operation": "UINT32",
+                            "type": "INPUT"
+                        }
+                    ]
+                }
+            ],
+            "functions": [
+                {
+                    "name": "ReadPage",
+                    "params": [
+                        {
+                            "name": "pageID",
+                            "type": "UINT32"
+                        }
+                    ],
+                    "returns": [
+                        {
+                            "name": "data",
+                            "type": "DATA"
+                        }
+                    ]
+                },
+                {
+                    "name": "WritePage",
+                    "params": [
+                        {
+                            "name": "pageID",
+                            "type": "UINT32"
+                        },
+                        {
+                            "name": "data",
+                            "type": "DATA"
                         }
                     ]
                 }

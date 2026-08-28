@@ -51,4 +51,5 @@ func _on_button_pressed(item: Dictionary) -> void:
         push_error("GraphEdit not found")
         return
 
-    _graph_edit.create_node_from_config(item)
+    var create_item := GameState.get_node_create_item(str(item.get("name", "")))
+    _graph_edit.create_node_from_config(create_item if not create_item.is_empty() else item)

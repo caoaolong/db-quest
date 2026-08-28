@@ -28,8 +28,12 @@ theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 20
 
-[node name="GridContainer" type="GridContainer" parent="PanelContainer/MarginContainer" unique_id=695212695]
+[node name="ScrollContainer" type="ScrollContainer" parent="PanelContainer/MarginContainer" unique_id=695212695]
 layout_mode = 2
-theme_override_constants/h_separation = 16
-theme_override_constants/v_separation = 16
-columns = 4
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="ContentVBox" type="VBoxContainer" parent="PanelContainer/MarginContainer/ScrollContainer" unique_id=695212696]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 24

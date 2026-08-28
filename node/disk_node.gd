@@ -55,7 +55,7 @@ func _on_display_clicked() -> void:
 
 func run(inputs: Dictionary = {}) -> Variant:
     var slot_inputs := _get_slot_inputs(inputs)
-    var operation := _normalize_operation(slot_inputs.get(1, ""))
+    var operation := _normalize_operation(slot_inputs.get(2, ""))
     var disk_path := GameState.virtual_disk_path
 
     match operation:
@@ -91,8 +91,8 @@ func _run_identify() -> Dictionary:
 
 
 func _run_read(disk_path: String, slot_inputs: Dictionary) -> PackedByteArray:
-    var count := _get_sector_count(slot_inputs.get(4, 1))
-    var base_sector := _get_sector_index(slot_inputs.get(3, 0))
+    var count := _get_sector_count(slot_inputs.get(5, 1))
+    var base_sector := _get_sector_index(slot_inputs.get(4, 0))
     var sector_index := base_sector + queue_index * count
     var length := count * VirtualDisk.SECTOR_SIZE
     var sector_data := VirtualDisk.read_bytes(disk_path, sector_index * VirtualDisk.SECTOR_SIZE, length)
@@ -110,9 +110,9 @@ func _run_read(disk_path: String, slot_inputs: Dictionary) -> PackedByteArray:
 
 
 func _run_write(disk_path: String, slot_inputs: Dictionary) -> PackedByteArray:
-    var source_bytes := _to_byte_array(slot_inputs.get(2))
-    var requested_count := _get_sector_count(slot_inputs.get(4, 1))
-    var base_sector := _get_sector_index(slot_inputs.get(3, 0))
+    var source_bytes := _to_byte_array(slot_inputs.get(3))
+    var requested_count := _get_sector_count(slot_inputs.get(5, 1))
+    var base_sector := _get_sector_index(slot_inputs.get(4, 0))
     # 队列波次里每一包是一块数据：按实际占用扇区推进地址，避免 Count=2 时写成 0、2 而跳过 1。
     var write_count := requested_count
     if _is_queue_io():

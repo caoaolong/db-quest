@@ -1,6 +1,7 @@
 class_name TaskTrigger
 extends RefCounted
 
+const AFTER_RUN := "after(run)"
 const AFTER_DISK_RUN := "after(Disk->run)"
 const AFTER_VD_WRITE := "after(VD->write)"
 const AFTER_VD_READ := "after(VD->read)"

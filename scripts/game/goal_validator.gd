@@ -10,6 +10,10 @@ static func evaluate_goal(goal: String, graph_edit: GraphEdit) -> bool:
     if expression.is_empty():
         return false
 
+    var node_check := _parse_node_check(expression)
+    if not node_check.is_empty():
+        return _evaluate_node_check(node_check, graph_edit)
+
     var rule_check := _parse_rule_check(expression)
     if not rule_check.is_empty():
         return _evaluate_rule_check(rule_check, graph_edit)
@@ -28,6 +32,30 @@ static func evaluate_task(task: Dictionary, graph_edit: GraphEdit) -> bool:
     if not task is Dictionary:
         return false
     return evaluate_goal(str(task.get("goal", "")), graph_edit)
+
+
+static func _parse_node_check(expression: String) -> Dictionary:
+    var parts := expression.split(".", false, 1)
+    if parts.size() != 2:
+        return {}
+    var node_type := str(parts[0]).strip_edges()
+    var function_name := str(parts[1]).strip_edges()
+    if node_type.is_empty() or function_name.to_lower() != "check":
+        return {}
+    return {
+        "node_type": node_type,
+    }
+
+
+static func _evaluate_node_check(node_check: Dictionary, graph_edit: GraphEdit) -> bool:
+    var node_type := str(node_check.get("node_type", "")).strip_edges()
+    var nodes := _find_nodes_by_type(graph_edit, node_type)
+    if nodes.is_empty():
+        return false
+    for node in nodes:
+        if not node.check():
+            return false
+    return true
 
 
 static func _parse_rule_check(expression: String) -> Dictionary:
@@ -161,8 +189,16 @@ static func _resolve_buffer_sector(source: String, sector_index: int) -> String:
 
 
 static func _find_node_by_type(graph_edit: GraphEdit, node_type: String) -> BaseNode:
-    if graph_edit == null or node_type.is_empty():
+    var nodes := _find_nodes_by_type(graph_edit, node_type)
+    if nodes.is_empty():
         return null
+    return nodes[0]
+
+
+static func _find_nodes_by_type(graph_edit: GraphEdit, node_type: String) -> Array[BaseNode]:
+    var result: Array[BaseNode] = []
+    if graph_edit == null or node_type.is_empty():
+        return result
 
     for child in graph_edit.get_children():
         if not child is GraphNode:
@@ -171,14 +207,12 @@ static func _find_node_by_type(graph_edit: GraphEdit, node_type: String) -> Base
         var graph_node := child as GraphNode
         if str(graph_node.get_meta("node_type", "")) != node_type:
             continue
-        if graph_node.get_child_count() == 0:
-            continue
+        for child_node in graph_node.get_children():
+            if child_node is BaseNode:
+                result.append(child_node as BaseNode)
+                break
 
-        var content := graph_node.get_child(0)
-        if content is BaseNode:
-            return content as BaseNode
-
-    return null
+    return result
 
 
 static func _bytes_to_compare_string(data: PackedByteArray) -> String:

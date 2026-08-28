@@ -20,6 +20,8 @@ enum Slot {
     UINT32,
     UINT64,
     PAGE_DATA,
+    FUNCTION,
+    REFER,
 }
 
 const SLOT_COLORS: Dictionary = {
@@ -32,6 +34,8 @@ const SLOT_COLORS: Dictionary = {
     Slot.UINT32: "#818CF8",
     Slot.UINT64: "#3B82F6",
     Slot.PAGE_DATA: "#F97316",
+    Slot.FUNCTION: "#22D3EE",
+    Slot.REFER: "#FBBF24",
 }
 
 const UINT_SLOT_WIDTHS: Dictionary = {
@@ -45,6 +49,19 @@ const node_style = preload("res://node/node_style.tres")
 # 端口两侧留白，避免点到 Label/输入框时抢走连线热区、误触发拖动节点
 const ROW_PORT_SIDE_MARGIN := 28 # 与 BaseNode.BODY_SIDE_MARGIN 保持一致
 const ROW_LABEL_MIN_WIDTH := 72
+const SELF_REFER_SLOT := 0
+const CONTENT_SLOT := 1
+const FIRST_DATA_SLOT := 2
+const REFER_COLORS := [
+    "#38BDF8",
+    "#A855F7",
+    "#34D399",
+    "#F97316",
+    "#F43F5E",
+    "#818CF8",
+    "#14B8A6",
+    "#EAB308",
+]
 const PORT_HOTZONE_INNER := 32
 const PORT_HOTZONE_OUTER := 40
 const SYSTEM_NODE_POSITIONS := {
@@ -62,6 +79,8 @@ signal run_spend_changed(total_ms: int)
 func _ready() -> void:
     connection_request.connect(_on_connection_request)
     disconnection_request.connect(_on_disconnection_request)
+    connection_from_empty.connect(_on_connection_from_empty)
+    connection_to_empty.connect(_on_connection_to_empty)
     popup_request.connect(_on_popup_request)
     end_node_move.connect(_on_end_node_move)
     delete_nodes_request.connect(_on_delete_nodes_request)
@@ -74,6 +93,8 @@ func _ready() -> void:
 
     add_valid_connection_type(Slot.QUEUE, Slot.DATA)
     add_valid_connection_type(Slot.DATA, Slot.QUEUE)
+    add_valid_connection_type(Slot.FUNCTION, Slot.REFER)
+    add_valid_connection_type(Slot.REFER, Slot.FUNCTION)
     _register_uint_widening_connections()
     _register_uint_to_data_connections()
     _register_union_connections()
@@ -130,7 +151,8 @@ func _on_delete_nodes_request(nodes: Array) -> void:
         var graph_node := get_node_or_null(NodePath(str(node_name))) as GraphNode
         if graph_node == null:
             continue
-        if GameState.is_system_node_name(str(graph_node.get_meta("template_name", ""))):
+        var template_name := str(graph_node.get_meta("template_name", ""))
+        if GameState.is_system_node_name(template_name):
             continue
         graph_node.queue_free()
     schedule_save()
@@ -148,9 +170,137 @@ func _on_connection_request(from_node: StringName, from_port: int, to_node: Stri
     var to_type := to_graph_node.get_input_port_type(to_port)
     if from_type != to_type and not is_valid_connection_type(from_type, to_type):
         return
+    if _can_connect_function_bind(from_graph_node, from_port, to_graph_node, to_port):
+        connect_node(from_node, from_port, to_node, to_port)
+        _sync_adapter_from_function_bind(from_graph_node, from_port, to_graph_node, to_port)
+        schedule_save()
+        return
+    if not _can_connect_refer(from_graph_node, from_port, to_graph_node, to_port, from_type, to_type):
+        return
 
     connect_node(from_node, from_port, to_node, to_port)
     schedule_save()
+
+
+func _on_connection_from_empty(to_node: StringName, to_port: int, release_position: Vector2) -> void:
+    var host := get_node_or_null(NodePath(to_node)) as GraphNode
+    if host == null:
+        return
+    var slot_index := host.get_input_port_slot(to_port)
+    if not is_function_member_slot(host, slot_index):
+        return
+    _spawn_function_adapter(host, slot_index, to_port, release_position)
+
+
+func _on_connection_to_empty(from_node: StringName, from_port: int, release_position: Vector2) -> void:
+    var host := get_node_or_null(NodePath(from_node)) as GraphNode
+    if host == null:
+        return
+    var slot_index := host.get_output_port_slot(from_port)
+    if not is_function_member_slot(host, slot_index):
+        return
+    var input_port := _function_slot_input_port(host, slot_index)
+    if input_port < 0:
+        return
+    _spawn_function_adapter(host, slot_index, input_port, release_position)
+
+
+func _spawn_function_adapter(
+    host: GraphNode,
+    host_slot: int,
+    host_input_port: int,
+    release_position: Vector2
+) -> void:
+    var info := _function_slot_info(host, host_slot)
+    if info.is_empty():
+        return
+
+    var item := GameState.get_node_create_item("FunctionAdapter")
+    if item.is_empty():
+        return
+
+    var created := create_node_from_config(
+        item,
+        "",
+        _graph_position_from_local(release_position),
+        {
+            "function_owner": str(info.get("owner", "")),
+            "function_name": str(info.get("name", "")),
+        },
+        false,
+        true
+    )
+    if created == null:
+        return
+
+    var adapter_port := _self_refer_output_port(created)
+    if adapter_port < 0 or host_input_port < 0:
+        return
+    if not _can_connect_function_bind(created, adapter_port, host, host_input_port):
+        return
+    connect_node(created.name, adapter_port, host.name, host_input_port)
+    schedule_save()
+
+
+func _graph_position_from_local(local_position: Vector2) -> Vector2:
+    return (local_position + scroll_offset) / zoom
+
+
+func _function_slot_info(node: GraphNode, slot_index: int) -> Dictionary:
+    if not is_function_member_slot(node, slot_index):
+        return {}
+    var child := node.get_child(slot_index)
+    var function_name := str(child.get_meta("function_name", "")).strip_edges()
+    if function_name.is_empty():
+        return {}
+    return {
+        "owner": str(node.get_meta("template_name", "")).strip_edges(),
+        "name": function_name,
+    }
+
+
+func _function_slot_input_port(node: GraphNode, slot_index: int) -> int:
+    if node == null:
+        return -1
+    for port_index in node.get_input_port_count():
+        if node.get_input_port_slot(port_index) == slot_index:
+            return port_index
+    return -1
+
+
+func _self_refer_output_port(node: GraphNode) -> int:
+    if node == null:
+        return -1
+    for port_index in node.get_output_port_count():
+        if node.get_output_port_slot(port_index) == SELF_REFER_SLOT:
+            return port_index
+    return -1
+
+
+func _sync_adapter_from_function_bind(
+    from_node: GraphNode,
+    from_port: int,
+    to_node: GraphNode,
+    to_port: int
+) -> void:
+    var from_slot := from_node.get_output_port_slot(from_port)
+    var to_slot := to_node.get_input_port_slot(to_port)
+    if is_function_adapter(from_node) and is_function_member_slot(to_node, to_slot):
+        _apply_adapter_function(from_node, to_node, to_slot)
+    elif is_function_adapter(to_node) and is_function_member_slot(from_node, from_slot):
+        _apply_adapter_function(to_node, from_node, from_slot)
+
+
+func _apply_adapter_function(adapter_node: GraphNode, host: GraphNode, host_slot: int) -> void:
+    var info := _function_slot_info(host, host_slot)
+    if info.is_empty():
+        return
+    var adapter := _base_node_of(adapter_node)
+    if adapter is FunctionAdapterNode:
+        (adapter as FunctionAdapterNode).bind_function(
+            str(info.get("owner", "")),
+            str(info.get("name", ""))
+        )
 
 
 func _on_disconnection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
@@ -251,6 +401,7 @@ func run_all() -> void:
     await _run_queue_wave(phases["queue"], results)
     await _run_phase(phases["after"], results)
 
+    TaskTrigger.handle(TaskTrigger.AFTER_RUN, self)
     TaskTrigger.reevaluate([
         TaskTrigger.AFTER_VD_READ,
         TaskTrigger.AFTER_VF_READ,
@@ -381,10 +532,11 @@ func _collect_downstream_closure(start: GraphNode, allowed: Dictionary) -> Dicti
         closure[node_name] = node
 
         for conn in get_connection_list():
-            var from_name := String(conn.get("from_node", conn.get("from")))
+            var pair := _execution_pair_for_connection(conn)
+            var from_name := str(pair.get("from", ""))
             if from_name != node_name:
                 continue
-            var to_name := String(conn.get("to_node", conn.get("to")))
+            var to_name := str(pair.get("to", ""))
             if not allowed.has(to_name) or closure.has(to_name):
                 continue
             stack.append(allowed[to_name])
@@ -414,9 +566,12 @@ func _has_queue_inbound(graph_node: GraphNode) -> bool:
 
 
 func _base_node_of(graph_node: GraphNode) -> BaseNode:
-    if graph_node == null or graph_node.get_child_count() == 0:
+    if graph_node == null:
         return null
-    return graph_node.get_child(0) as BaseNode
+    for child in graph_node.get_children():
+        if child is BaseNode:
+            return child as BaseNode
+    return null
 
 
 func _execute_graph_node(graph_node: GraphNode, results: Dictionary) -> Variant:
@@ -425,8 +580,8 @@ func _execute_graph_node(graph_node: GraphNode, results: Dictionary) -> Variant:
     if not _is_graph_node_enabled(graph_node):
         return null
 
-    var content: Node = graph_node.get_child(0)
-    if not content is BaseNode:
+    var content := _base_node_of(graph_node)
+    if content == null:
         return null
 
     _set_graph_run_status(graph_node, QuestGraphNode.RunStatus.RUNNING)
@@ -491,8 +646,11 @@ func _compute_execution_order(closure: Dictionary) -> Array:
         adjacency[node_name] = []
 
     for conn in get_connection_list():
-        var from_name := String(conn.get("from_node", conn.get("from")))
-        var to_name := String(conn.get("to_node", conn.get("to")))
+        var pair := _execution_pair_for_connection(conn)
+        var from_name := str(pair.get("from", ""))
+        var to_name := str(pair.get("to", ""))
+        if from_name.is_empty() or to_name.is_empty():
+            continue
         if not closure.has(from_name) or not closure.has(to_name):
             continue
         adjacency[from_name].append(to_name)
@@ -609,12 +767,13 @@ func _get_direct_upstream_nodes(graph_node: GraphNode) -> Array:
     var node_name := String(graph_node.name)
 
     for conn in get_connection_list():
-        var to_name := String(conn.get("to_node", conn.get("to")))
+        var pair := _execution_pair_for_connection(conn)
+        var to_name := str(pair.get("to", ""))
         if to_name != node_name:
             continue
 
-        var from_name := String(conn.get("from_node", conn.get("from")))
-        if seen.has(from_name):
+        var from_name := str(pair.get("from", ""))
+        if from_name.is_empty() or seen.has(from_name):
             continue
         seen[from_name] = true
 
@@ -623,6 +782,26 @@ func _get_direct_upstream_nodes(graph_node: GraphNode) -> Array:
             result.append(from_node)
 
     return result
+
+
+## A 持有 REFER(B) 字段时，无论连线方向如何，B 都先于 A 执行。
+func _execution_pair_for_connection(conn: Dictionary) -> Dictionary:
+    var from_name := String(conn.get("from_node", conn.get("from")))
+    var to_name := String(conn.get("to_node", conn.get("to")))
+    var from_port := int(conn.get("from_port", 0))
+    var to_port := int(conn.get("to_port", 0))
+    var from_node := get_node_or_null(NodePath(from_name)) as GraphNode
+    var to_node := get_node_or_null(NodePath(to_name)) as GraphNode
+    if from_node == null or to_node == null:
+        return {"from": from_name, "to": to_name}
+
+    var from_slot := from_node.get_output_port_slot(from_port)
+    var to_slot := to_node.get_input_port_slot(to_port)
+    var from_is_member := _is_member_refer_slot(from_node, from_slot)
+    var to_is_member := _is_member_refer_slot(to_node, to_slot)
+    if from_is_member and not to_is_member:
+        return {"from": to_name, "to": from_name}
+    return {"from": from_name, "to": to_name}
 
 
 func has_node_type(node_type: String) -> bool:
@@ -644,7 +823,8 @@ func create_node_from_config(
     instance_id: String = "",
     node_position: Variant = null,
     state: Dictionary = {},
-    allow_system: bool = false
+    allow_system: bool = false,
+    force: bool = false
 ) -> GraphNode:
     var config := GameState.resolve_node_config(item)
     if config.is_empty():
@@ -658,7 +838,7 @@ func create_node_from_config(
         EditorLog.warn("系统节点不支持手动创建")
         return null
 
-    if category != "System" and not GameState.is_node_available(template_name):
+    if category != "System" and not GameState.is_node_available(template_name) and not force:
         if not _is_restoring:
             EditorLog.warn("Node is not available in current level: %s" % template_name)
             return null
@@ -698,11 +878,15 @@ func create_node_from_config(
     content.offset_top = 0
     content.offset_right = 0
     content.offset_bottom = 0
+    var self_row := _create_self_refer_row(template_name)
+    node.add_child(self_row)
+    _apply_self_refer_slot(node, template_name)
+
     node.add_child(content)
+    node.set_slot_enabled_left(CONTENT_SLOT, false)
+    node.set_slot_enabled_right(CONTENT_SLOT, false)
     if attributes.has("subtitle"):
         _set_subtitle(content, str(attributes["subtitle"]))
-    node.set_slot_enabled_left(0, false)
-    node.set_slot_enabled_right(0, false)
 
     _build_node_rows(node, attributes)
 
@@ -744,12 +928,11 @@ func clear_run_data() -> void:
             continue
         if child.get_child_count() == 0:
             continue
-        var content := child.get_child(0)
-        if content is BaseNode:
-            var base_node := content as BaseNode
-            base_node.clear_run_data()
-            if base_node.action:
-                base_node.action.reset_progress()
+        var content := _base_node_of(child as GraphNode)
+        if content != null:
+            content.clear_run_data()
+            if content.action:
+                content.action.reset_progress()
         _set_graph_run_status(child as GraphNode, QuestGraphNode.RunStatus.IDLE)
     schedule_save()
 
@@ -786,7 +969,7 @@ func export_snapshot() -> Dictionary:
             continue
 
         var graph_node := child as GraphNode
-        var content := graph_node.get_child(0) as Control
+        var content := _base_node_of(graph_node)
         var node_entry := {
             "instance_id": String(graph_node.name),
             "template_name": str(graph_node.get_meta("template_name", graph_node.name)),
@@ -907,6 +1090,196 @@ func _ensure_system_nodes() -> void:
         create_node_from_config(create_item, template_name, _position, {}, true)
 
 
+func _find_node_by_template(template_name: String) -> GraphNode:
+    for child in get_children():
+        if not child is GraphNode:
+            continue
+        if str((child as GraphNode).get_meta("template_name", "")) == template_name:
+            return child as GraphNode
+    return null
+
+
+func is_function_slot_type(slot_type: int) -> bool:
+    return slot_type == Slot.FUNCTION
+
+
+func is_refer_slot_type(slot_type: int) -> bool:
+    return slot_type == Slot.REFER
+
+
+func is_self_refer_slot(node: GraphNode, slot_index: int) -> bool:
+    if node == null:
+        return false
+    return int(node.get_meta("self_refer_slot", -1)) == slot_index
+
+
+func _is_member_refer_slot(node: GraphNode, slot_index: int) -> bool:
+    if node == null or slot_index < 0:
+        return false
+    if is_self_refer_slot(node, slot_index):
+        return false
+    if is_function_member_slot(node, slot_index):
+        return false
+    return not get_slot_refer_target(node, slot_index).is_empty()
+
+
+func get_slot_refer_target(node: GraphNode, slot_index: int) -> String:
+    if node == null:
+        return ""
+    var targets: Variant = node.get_meta("refer_targets", {})
+    if not targets is Dictionary:
+        return ""
+    return str((targets as Dictionary).get(str(slot_index), "")).strip_edges()
+
+
+func _set_slot_refer_target(node: GraphNode, slot_index: int, refer_target: String) -> void:
+    if node == null:
+        return
+    var targets: Dictionary = {}
+    var raw: Variant = node.get_meta("refer_targets", {})
+    if raw is Dictionary:
+        targets = (raw as Dictionary).duplicate()
+    var normalized := refer_target.strip_edges()
+    if normalized.is_empty():
+        targets.erase(str(slot_index))
+    else:
+        targets[str(slot_index)] = normalized
+    node.set_meta("refer_targets", targets)
+
+
+func _apply_self_refer_slot(node: GraphNode, template_name: String) -> void:
+    var refer_target := template_name.strip_edges()
+    if refer_target.is_empty():
+        return
+
+    node.set_meta("self_refer_slot", SELF_REFER_SLOT)
+    _apply_refer_ports(node, SELF_REFER_SLOT, refer_target)
+
+
+func _create_self_refer_row(template_name: String) -> Control:
+    var wrapper := _wrap_labeled_row(template_name, null)
+    wrapper.custom_minimum_size = Vector2(0, 28)
+    wrapper.set_meta("self_refer_row", true)
+    return wrapper
+
+
+func is_function_node(node: GraphNode) -> bool:
+    if node == null:
+        return false
+    var template_name := str(node.get_meta("template_name", ""))
+    var node_type := str(node.get_meta("node_type", ""))
+    return template_name == "Function" or node_type == "Function"
+
+
+func is_function_adapter(node: GraphNode) -> bool:
+    if node == null:
+        return false
+    var template_name := str(node.get_meta("template_name", ""))
+    var node_type := str(node.get_meta("node_type", ""))
+    return template_name == "FunctionAdapter" or node_type == "FunctionAdapter"
+
+
+func is_function_member_slot(node: GraphNode, slot_index: int) -> bool:
+    if node == null or slot_index < 0 or slot_index >= node.get_child_count():
+        return false
+    var child := node.get_child(slot_index)
+    return child != null and child.has_meta("function_slot")
+
+
+func _is_function_node_refer_slot(node: GraphNode, slot_index: int) -> bool:
+    if not is_self_refer_slot(node, slot_index):
+        return false
+    return is_function_node(node) or is_function_adapter(node)
+
+
+func _can_connect_function_bind(
+    from_node: GraphNode,
+    from_port: int,
+    to_node: GraphNode,
+    to_port: int
+) -> bool:
+    var from_slot := from_node.get_output_port_slot(from_port)
+    var to_slot := to_node.get_input_port_slot(to_port)
+    if is_function_member_slot(from_node, from_slot) and _is_function_node_refer_slot(to_node, to_slot):
+        return true
+    if _is_function_node_refer_slot(from_node, from_slot) and is_function_member_slot(to_node, to_slot):
+        return true
+    return false
+
+
+func _can_connect_refer(
+    from_node: GraphNode,
+    from_port: int,
+    to_node: GraphNode,
+    to_port: int,
+    from_type: int,
+    to_type: int
+) -> bool:
+    var from_is_refer := is_refer_slot_type(from_type)
+    var to_is_refer := is_refer_slot_type(to_type)
+    if not from_is_refer and not to_is_refer:
+        return true
+    if not from_is_refer or not to_is_refer:
+        return false
+
+    var from_target := get_slot_refer_target(from_node, from_node.get_output_port_slot(from_port))
+    var to_target := get_slot_refer_target(to_node, to_node.get_input_port_slot(to_port))
+    if from_target.is_empty() or to_target.is_empty() or from_target != to_target:
+        EditorLog.warn("引用类型不匹配：REFER(%s) → REFER(%s)" % [from_target, to_target])
+        return false
+    return true
+
+
+func add_function_slot(node: GraphNode, function_name: String, has_return: bool) -> int:
+    if node == null:
+        return -1
+
+    var slot_index := node.get_child_count()
+    var op_list := [ {
+        "operation": Slot.FUNCTION,
+        "type": SlotType.INPUT,
+    }]
+    if has_return:
+        op_list.append({
+            "operation": Slot.FUNCTION,
+            "type": SlotType.OUTPUT,
+        })
+
+    var created := create_node_row(node, slot_index, function_name, op_list)
+    var wrapper := node.get_child(created) as Control
+    if wrapper:
+        wrapper.set_meta("function_slot", true)
+        wrapper.set_meta("function_name", function_name)
+        wrapper.set_meta("has_return", has_return)
+        _attach_function_slot_delete(wrapper, function_name)
+    return created
+
+
+func _attach_function_slot_delete(wrapper: Control, function_name: String) -> void:
+    if wrapper == null or wrapper.get_child_count() == 0:
+        return
+    var row := wrapper.get_child(0) as HBoxContainer
+    if row == null:
+        return
+
+    for child in row.get_children():
+        if child.has_meta("row_field"):
+            row.remove_child(child)
+            child.free()
+
+    var button := Button.new()
+    button.text = "删除"
+    button.focus_mode = Control.FOCUS_NONE
+    button.custom_minimum_size = Vector2(48, 0)
+    button.pressed.connect(func() -> void:
+        var graph_node := wrapper.get_parent() as GraphNode
+        var base := _base_node_of(graph_node)
+        if base != null:
+            base.remove_function(function_name)
+    )
+    row.add_child(button)
+
+
 func _exit_tree() -> void:
     _save_snapshot()
 
@@ -925,6 +1298,8 @@ func _generate_instance_id(template_name: String) -> String:
 
 
 func _export_node_state(content: Control) -> Dictionary:
+    if content == null:
+        return {}
     if content is BaseNode:
         return (content as BaseNode).collect_persisted_data()
     return {}
@@ -978,13 +1353,17 @@ func _add_row_from_config(node: GraphNode, row: Dictionary) -> void:
     var op_list := _parse_op_list(row.get("op_list", []))
     create_node_row(
         node,
-        int(row.get("row_number", 0)),
+        _config_row_to_slot(int(row.get("row_number", 0))),
         str(row.get("row_name", "")),
         op_list,
         row.get("row_options", []),
         str(row.get("row_number_input", "")),
         str(row.get("row_text_input", ""))
     )
+
+
+func _config_row_to_slot(row_number: int) -> int:
+    return maxi(FIRST_DATA_SLOT, row_number + (FIRST_DATA_SLOT - 1))
 
 
 func create_node_row(
@@ -1012,7 +1391,7 @@ func create_node_row(
     if row_field != null:
         _bind_row_control_save(row_field)
     var wrapper := _wrap_labeled_row(label_text, row_field)
-    var slot_index := maxi(1, row_number)
+    var slot_index := maxi(FIRST_DATA_SLOT, row_number)
 
     while node.get_child_count() < slot_index:
         var placeholder := _wrap_labeled_row("", null)
@@ -1034,6 +1413,7 @@ func create_node_row(
         node.add_child(wrapper)
         node.move_child(wrapper, slot_index)
 
+    var refer_target := ""
     for op in op_list:
         if not op is Dictionary:
             continue
@@ -1049,11 +1429,48 @@ func create_node_row(
                 node.set_slot_enabled_right(slot_index, true)
                 node.set_slot_type_right(slot_index, slot_operation)
                 node.set_slot_color_right(slot_index, slot_color)
+        if slot_operation == Slot.REFER:
+            refer_target = str(op.get("refer", "")).strip_edges()
+
+    if not refer_target.is_empty():
+        _apply_refer_ports(node, slot_index, refer_target)
+        wrapper.set_meta("refer_target", refer_target)
+    elif _row_has_refer_operation(op_list):
+        EditorLog.warn("REFER slot 缺少引用类型")
     return slot_index
 
 
+func _row_has_refer_operation(op_list: Array) -> bool:
+    for op in op_list:
+        if op is Dictionary and op.get("operation", -1) == Slot.REFER:
+            return true
+    return false
+
+
+func _apply_refer_ports(node: GraphNode, slot_index: int, refer_target: String) -> void:
+    var color := _get_refer_color(refer_target)
+    node.set_slot_enabled_left(slot_index, true)
+    node.set_slot_type_left(slot_index, Slot.REFER)
+    node.set_slot_color_left(slot_index, color)
+    node.set_slot_enabled_right(slot_index, true)
+    node.set_slot_type_right(slot_index, Slot.REFER)
+    node.set_slot_color_right(slot_index, color)
+    _set_slot_refer_target(node, slot_index, refer_target)
+
+
+func _get_refer_color(refer_target: String) -> Color:
+    var key := refer_target.strip_edges()
+    if key.is_empty():
+        return _get_slot_color(Slot.REFER)
+    var hash_value := 0
+    for i in key.length():
+        hash_value = (hash_value * 31 + key.unicode_at(i)) & 0x7fffffff
+    var hex := str(REFER_COLORS[hash_value % REFER_COLORS.size()])
+    return Color.html(hex)
+
+
 func remove_slot_row(node: GraphNode, slot_index: int) -> void:
-    if node == null or slot_index < 1 or slot_index >= node.get_child_count():
+    if node == null or slot_index < FIRST_DATA_SLOT or slot_index >= node.get_child_count():
         return
     _clear_slot_ports(node, slot_index)
     var child := node.get_child(slot_index)
@@ -1066,6 +1483,7 @@ func _clear_slot_ports(node: GraphNode, slot_index: int) -> void:
     _disconnect_slot(node, slot_index, true)
     node.set_slot_enabled_left(slot_index, false)
     node.set_slot_enabled_right(slot_index, false)
+    _set_slot_refer_target(node, slot_index, "")
 
 
 func _bind_row_control_save(control: Control) -> void:
@@ -1261,7 +1679,11 @@ func _port_index_for_slot(node: GraphNode, row_number: int, is_output: bool) -> 
 
 
 func _parse_operation(op_name: String) -> Slot:
-    match op_name.strip_edges().to_upper():
+    var normalized := op_name.strip_edges()
+    if _is_refer_operation(normalized):
+        return Slot.REFER
+
+    match normalized.to_upper():
         "OPERATION_CODE":
             return Slot.OPERATION_CODE
         "DATA":
@@ -1280,9 +1702,24 @@ func _parse_operation(op_name: String) -> Slot:
             return Slot.UINT64
         "PAGE_DATA":
             return Slot.PAGE_DATA
+        "FUNCTION":
+            return Slot.FUNCTION
         _:
             EditorLog.warn("Unknown operation: %s" % op_name)
             return Slot.OPERATION_CODE
+
+
+func _is_refer_operation(op_name: String) -> bool:
+    return op_name.strip_edges().to_upper().begins_with("REFER")
+
+
+func _parse_refer_target(op_name: String) -> String:
+    var normalized := op_name.strip_edges()
+    var start := normalized.find("(")
+    var end := normalized.rfind(")")
+    if start < 0 or end <= start:
+        return ""
+    return normalized.substr(start + 1, end - start - 1).strip_edges()
 
 
 func _slot_to_type_name(slot: Slot) -> String:
@@ -1304,10 +1741,14 @@ func _parse_op_list(raw_list: Variant) -> Array:
     if raw_list is Array:
         for item in raw_list:
             if item is Dictionary:
-                result.append({
-                    "operation": _parse_operation(str(item.get("operation", ""))),
+                var operation_name := str(item.get("operation", ""))
+                var parsed := {
+                    "operation": _parse_operation(operation_name),
                     "type": _parse_slot_type(str(item.get("type", ""))),
-                })
+                }
+                if parsed["operation"] == Slot.REFER:
+                    parsed["refer"] = _parse_refer_target(operation_name)
+                result.append(parsed)
     return result
 
 

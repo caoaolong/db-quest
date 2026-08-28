@@ -186,7 +186,10 @@ func _fallback_title() -> String:
 
 
 func _can_delete() -> bool:
-    return not GameState.is_system_node_name(str(get_meta("template_name", "")))
+    var template_name := str(get_meta("template_name", ""))
+    if GameState.is_system_node_name(template_name):
+        return false
+    return true
 
 
 func _sync_delete_button() -> void:
@@ -253,10 +256,29 @@ func _apply_run_status() -> void:
     add_theme_stylebox_override("titlebar_selected", _titlebar_selected_style)
 
 
-func _draw_port(_slot_index: int, port_position: Vector2i, left: bool, color: Color) -> void:
+func _draw_port(slot_index: int, port_position: Vector2i, left: bool, color: Color) -> void:
     var center := Vector2(port_position)
     var half_width := PORT_SIZE.x * 0.5
     var half_height := PORT_SIZE.y * 0.5
+
+    if _is_function_port(slot_index, left):
+        var diamond := PackedVector2Array([
+            center + Vector2(0.0, -half_height),
+            center + Vector2(half_width, 0.0),
+            center + Vector2(0.0, half_height),
+            center + Vector2(-half_width, 0.0),
+        ])
+        draw_colored_polygon(diamond, color)
+        return
+
+    if _is_self_refer_port(slot_index, left):
+        draw_circle(center, mini(half_width, half_height), color)
+        return
+
+    if _is_refer_port(slot_index, left):
+        var square := Rect2(center - Vector2(half_width, half_height), PORT_SIZE)
+        draw_rect(square, color, true)
+        return
 
     var points := PackedVector2Array()
     if left:
@@ -273,3 +295,28 @@ func _draw_port(_slot_index: int, port_position: Vector2i, left: bool, color: Co
         ])
 
     draw_colored_polygon(points, color)
+
+
+func _is_function_port(slot_index: int, left: bool) -> bool:
+    var slot_type := get_slot_type_left(slot_index) if left else get_slot_type_right(slot_index)
+    var graph_edit := get_parent()
+    if graph_edit != null and graph_edit.has_method("is_function_slot_type"):
+        return bool(graph_edit.call("is_function_slot_type", slot_type))
+    return false
+
+
+func _is_refer_port(slot_index: int, left: bool) -> bool:
+    var slot_type := get_slot_type_left(slot_index) if left else get_slot_type_right(slot_index)
+    var graph_edit := get_parent()
+    if graph_edit != null and graph_edit.has_method("is_refer_slot_type"):
+        return bool(graph_edit.call("is_refer_slot_type", slot_type))
+    return false
+
+
+func _is_self_refer_port(slot_index: int, left: bool) -> bool:
+    if not _is_refer_port(slot_index, left):
+        return false
+    var graph_edit := get_parent()
+    if graph_edit != null and graph_edit.has_method("is_self_refer_slot"):
+        return bool(graph_edit.call("is_self_refer_slot", self, slot_index))
+    return slot_index == 0

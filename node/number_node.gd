@@ -8,7 +8,7 @@ extends BaseNode
 }
 """
 
-const OUTPUT_SLOT := 1
+const OUTPUT_SLOT := 2
 const TYPE_OPTIONS := [
     UintCodec.TYPE_UINT8,
     UintCodec.TYPE_UINT16,

@@ -47,6 +47,7 @@ func apply_persisted_data(saved: Dictionary) -> void:
     var graph_node := get_parent() as GraphNode
     if graph_node and rows is Dictionary:
         _apply_role_row_data(graph_node, rows as Dictionary)
+    _restore_function_slots()
 
 
 func collect_persisted_data() -> Dictionary:
@@ -157,7 +158,7 @@ func _rebuild_slots() -> void:
     var saved_rows := _collect_role_row_data(graph_node)
     var saved_connections := _snapshot_connections(graph_node, graph_edit)
 
-    while graph_node.get_child_count() > 1:
+    while graph_node.get_child_count() > 2:
         graph_edit.remove_slot_row(graph_node, graph_node.get_child_count() - 1)
 
     var offset_op_list: Array = graph_edit._parse_op_list([{
@@ -169,7 +170,7 @@ func _rebuild_slots() -> void:
         "type": "OUTPUT",
     }])
 
-    var slot_index := 1
+    var slot_index := 2
     if is_data:
         var data_op_list: Array = graph_edit._parse_op_list([{
             "operation": "DATA",
@@ -208,6 +209,7 @@ func _rebuild_slots() -> void:
     if _restore_connections(graph_node, graph_edit, saved_connections):
         schedule_save()
     _update_mode_layout()
+    _restore_function_slots()
     _fit_graph_node_size(graph_node)
 
 

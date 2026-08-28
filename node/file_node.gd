@@ -7,12 +7,14 @@ extends BaseNode
 }
 """
 
-const SLOT_CODE := 1
-const SLOT_DATA := 2
-const SLOT_PAGE := 3
-const SLOT_COUNT := 4
+const SLOT_CODE := 2
+const SLOT_DATA := 3
+const SLOT_PAGE := 4
+const SLOT_COUNT := 5
 
 @export var title: String = "文件"
+
+var _handle: FileAccess = null
 
 @onready var progress: ProgressBar = $VBoxContainer/ProgressBar
 
@@ -31,51 +33,74 @@ func _sync_controls_from_data() -> void:
 
 
 func clear_run_data() -> void:
+    _close_handle()
     data["size"] = 0
     data.erase("page")
     _update_size_display()
 
 
+func has_handle() -> bool:
+    return _handle != null
+
+
+func get_handle() -> FileAccess:
+    return _handle
+
+
+func _close_handle() -> void:
+    if _handle != null:
+        _handle.close()
+        _handle = null
+
+
 func _update_size_display() -> void:
-    var page_count := VirtualFile.get_page_count()
-    if not data.has("page"):
-        set_subtitle("- / %d pages" % page_count)
+    if has_handle():
+        set_subtitle("opened")
         return
-    set_subtitle("%d / %d pages" % [int(data.get("page", 0)), page_count])
+    set_subtitle("- / -")
 
 
 func _on_display_clicked() -> void:
     action.display_data({
-        "file_path": GameState.virtual_file_path,
-        "total_bytes": VirtualFile.get_size_bytes(),
+        "disk_path": GameState.virtual_disk_path,
+        "opened": has_handle(),
+        "total_bytes": VirtualDisk.get_size_bytes(),
         "page_size": VirtualDisk.SECTOR_SIZE,
     }, DisplayDialog.DataType.BINARY)
 
 
-func run(inputs: Dictionary = {}) -> Variant:
-    var slot_inputs := _get_slot_inputs(inputs)
-    var operation := _normalize_operation(slot_inputs.get(SLOT_CODE, ""))
-    var file_path := GameState.virtual_file_path
-    var result: Variant
+func run(_inputs: Dictionary = {}) -> Variant:
+    _close_handle()
 
-    match operation:
-        "READ":
-            result = _run_read(file_path, slot_inputs)
-        "WRITE":
-            result = _run_write(file_path, slot_inputs)
-        "":
-            EditorLog.warn("文件未收到操作码，请将 Load String 接到 Code")
-            result = {
-                "error": "Missing operation",
-            }
-        _:
-            EditorLog.warn("Unknown file operation: %s" % operation)
-            result = {
-                "error": "Unknown operation: %s" % operation,
-            }
+    var disk_path := GameState.virtual_disk_path
+    if disk_path.is_empty():
+        disk_path = VirtualDisk.ensure_exists()
+        GameState.virtual_disk_path = disk_path
+    if disk_path.is_empty():
+        EditorLog.warn("无法打开虚拟磁盘：路径无效")
+        _update_size_display()
+        return {
+            "error": "Missing virtual disk",
+        }
 
+    var file := FileAccess.open(disk_path, FileAccess.READ_WRITE)
+    if file == null:
+        EditorLog.warn("打开虚拟磁盘失败: %s" % disk_path)
+        _update_size_display()
+        return {
+            "error": "Open virtual disk failed",
+        }
+
+    _handle = file
+    data["size"] = VirtualDisk.get_size_bytes()
+    _update_size_display()
+    schedule_save()
+    EditorLog.info("已打开虚拟磁盘，获得文件句柄")
     _notify_file_run()
-    return result
+    return {
+        "handle": true,
+        "path": disk_path,
+    }
 
 
 func _notify_file_run() -> void:

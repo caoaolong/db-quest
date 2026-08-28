@@ -19,6 +19,9 @@ var queue_length: int = 0
 
 @onready var action: NodeActionBar = $VBoxContainer/NodeActionBar
 
+var _function_option: OptionButton
+var _function_add_button: Button
+
 
 func set_subtitle(value: String) -> void:
     subtitle = value
@@ -43,6 +46,9 @@ func collect_persisted_data() -> Dictionary:
         var rows := _collect_row_data(graph_node)
         if not rows.is_empty():
             result["rows"] = rows
+    _sync_functions_from_slots()
+    if data.has("functions"):
+        result["functions"] = data["functions"]
     return result
 
 
@@ -62,6 +68,8 @@ func apply_persisted_data(saved: Dictionary) -> void:
     var graph_node := get_parent() as GraphNode
     if graph_node and rows is Dictionary:
         _apply_row_data(graph_node, rows)
+    _restore_function_slots()
+    _refresh_function_picker()
 
 
 func schedule_save() -> void:
@@ -87,6 +95,11 @@ func get_graph_edit() -> GraphEdit:
 
 func run(_inputs: Dictionary = {}) -> Variant:
     return null
+
+
+## 节点有效性校验。子类覆盖具体逻辑；默认未实现，视为不通过。
+func check() -> bool:
+    return false
 
 
 func get_spend() -> int:
@@ -202,6 +215,7 @@ func _ready() -> void:
     _bind_action_bar()
     _configure_action_bar()
     _apply_body_layout()
+    _setup_function_picker()
 
 
 ## 与 GraphEdit.ROW_PORT_SIDE_MARGIN 保持一致，使内容区与 slot 行左右对齐。
@@ -258,6 +272,206 @@ func _bind_action_bar() -> void:
         return
 
     action.display_clicked.connect(_on_display_clicked)
+
+
+func _can_add_prefab_functions() -> bool:
+    return not GameState.get_node_functions(_template_name()).is_empty()
+
+
+func _template_name() -> String:
+    var graph_node := get_parent() as GraphNode
+    if graph_node == null:
+        return ""
+    return str(graph_node.get_meta("template_name", "")).strip_edges()
+
+
+func _setup_function_picker() -> void:
+    if not _can_add_prefab_functions():
+        return
+
+    var vbox := get_node_or_null("VBoxContainer") as VBoxContainer
+    if vbox == null:
+        return
+    if vbox.get_node_or_null("FunctionPicker") != null:
+        return
+
+    var row := HBoxContainer.new()
+    row.name = "FunctionPicker"
+    row.add_theme_constant_override("separation", 8)
+    row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+    _function_option = OptionButton.new()
+    _function_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _function_option.custom_minimum_size = Vector2(80, 0)
+    row.add_child(_function_option)
+
+    _function_add_button = Button.new()
+    _function_add_button.text = "添加"
+    _function_add_button.focus_mode = Control.FOCUS_NONE
+    _function_add_button.custom_minimum_size = Vector2(48, 0)
+    _function_add_button.pressed.connect(_on_add_prefab_function_pressed)
+    row.add_child(_function_add_button)
+
+    var insert_at := 0
+    for i in vbox.get_child_count():
+        var child := vbox.get_child(i)
+        if child == action or child.has_meta("action_bar_bleed"):
+            insert_at = i + 1
+            break
+    vbox.add_child(row)
+    vbox.move_child(row, insert_at)
+    _refresh_function_picker()
+
+
+func _refresh_function_picker() -> void:
+    if _function_option == null or _function_add_button == null:
+        return
+
+    var added: Dictionary = {}
+    for entry in _function_entries():
+        var added_name := str(entry.get("name", "")).strip_edges()
+        if not added_name.is_empty():
+            added[added_name] = true
+
+    _function_option.clear()
+    var available := 0
+    for prefab in GameState.get_node_functions(_template_name()):
+        var function_name := str(prefab.get("name", "")).strip_edges()
+        if function_name.is_empty() or added.has(function_name):
+            continue
+        var label := str(prefab.get("label", function_name)).strip_edges()
+        if label.is_empty():
+            label = function_name
+        _function_option.add_item(label)
+        _function_option.set_item_metadata(_function_option.item_count - 1, {
+            "name": function_name,
+        })
+        available += 1
+
+    if available == 0:
+        _function_option.add_item("无可用函数")
+        _function_option.disabled = true
+        _function_add_button.disabled = true
+    else:
+        _function_option.disabled = false
+        _function_add_button.disabled = false
+        _function_option.selected = 0
+
+
+func _on_add_prefab_function_pressed() -> void:
+    if _function_option == null or _function_option.disabled:
+        return
+    var index := _function_option.selected
+    if index < 0:
+        return
+    var meta: Variant = _function_option.get_item_metadata(index)
+    if not meta is Dictionary:
+        return
+
+    var function_name := str(meta.get("name", "")).strip_edges()
+    if function_name.is_empty():
+        return
+
+    var functions := _function_entries()
+    for entry in functions:
+        if str(entry.get("name", "")) == function_name:
+            EditorLog.warn("成员函数已存在: %s" % function_name)
+            return
+
+    var prefab := GameState.get_node_function(_template_name(), function_name)
+    var has_return := _prefab_has_return(prefab)
+    functions.append({
+        "name": function_name,
+        "has_return": has_return,
+    })
+    data["functions"] = functions
+    _append_function_slot(function_name, has_return)
+    _refresh_function_picker()
+    schedule_save()
+
+
+func remove_function(function_name: String) -> void:
+    var target := function_name.strip_edges()
+    if target.is_empty():
+        return
+
+    var next: Array = []
+    for entry in _function_entries():
+        if str(entry.get("name", "")).strip_edges() != target:
+            next.append(entry)
+    data["functions"] = next
+    _restore_function_slots()
+    _refresh_function_picker()
+    schedule_save()
+
+
+func _prefab_has_return(prefab: Dictionary) -> bool:
+    var returns: Variant = prefab.get("returns", [])
+    return returns is Array and not (returns as Array).is_empty()
+
+
+func _function_entries() -> Array:
+    var result: Array = []
+    var raw: Variant = data.get("functions", [])
+    if raw is Array:
+        for item in raw:
+            if item is Dictionary:
+                result.append(item)
+    return result
+
+
+func _append_function_slot(function_name: String, has_return: bool) -> void:
+    var graph_edit := get_graph_edit()
+    var graph_node := get_parent() as GraphNode
+    if graph_edit == null or graph_node == null:
+        return
+    if not graph_edit.has_method("add_function_slot"):
+        return
+    graph_edit.add_function_slot(graph_node, function_name, has_return)
+    graph_node.reset_size()
+
+
+func _restore_function_slots() -> void:
+    var graph_edit := get_graph_edit()
+    var graph_node := get_parent() as GraphNode
+    if graph_edit == null or graph_node == null:
+        return
+    if not graph_edit.has_method("remove_slot_row") or not graph_edit.has_method("add_function_slot"):
+        return
+
+    for slot_index in range(graph_node.get_child_count() - 1, 0, -1):
+        var child := graph_node.get_child(slot_index)
+        if child.has_meta("function_slot"):
+            graph_edit.remove_slot_row(graph_node, slot_index)
+
+    for entry in _function_entries():
+        var function_name := str(entry.get("name", "")).strip_edges()
+        if function_name.is_empty():
+            continue
+        var has_return := bool(entry.get("has_return", false))
+        var prefab := GameState.get_node_function(_template_name(), function_name)
+        if not prefab.is_empty():
+            has_return = _prefab_has_return(prefab)
+        graph_edit.add_function_slot(graph_node, function_name, has_return)
+    graph_node.reset_size()
+
+
+func _sync_functions_from_slots() -> void:
+    var graph_node := get_parent() as GraphNode
+    if graph_node == null:
+        return
+
+    var functions: Array = []
+    for slot_index in range(1, graph_node.get_child_count()):
+        var child := graph_node.get_child(slot_index)
+        if not child.has_meta("function_slot"):
+            continue
+        functions.append({
+            "name": str(child.get_meta("function_name", "")),
+            "has_return": bool(child.get_meta("has_return", false)),
+        })
+    if not functions.is_empty() or data.has("functions"):
+        data["functions"] = functions
 
 
 func _on_display_clicked() -> void:

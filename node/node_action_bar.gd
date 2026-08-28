@@ -58,7 +58,7 @@ func play_spend(spend_ms: int) -> void:
     progress_bar.value = 100
 
 
-func display_data(data: Variant, data_type: DisplayDialog.DataType = DisplayDialog.DataType.STRING) -> void:
+func display_data(data: Variant, data_type: DisplayDialog.DataType=DisplayDialog.DataType.STRING) -> void:
     if display_dialog == null:
         _bind_display_dialog()
     if display_dialog == null:

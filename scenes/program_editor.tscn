@@ -1,12 +1,13 @@
 [gd_scene format=3 uid="uid://b0kmtt1xqmp6c"]
 
-[ext_resource type="Script" uid="uid://dh1aaptej2soq" path="res://scripts/editor/graph_edit.gd" id="1_wlowb"]
-[ext_resource type="StyleBox" uid="uid://bhn0kgpjel2s0" path="res://scripts/editor/button_bar.tres" id="3_wrb8p"]
-[ext_resource type="Script" uid="uid://d2jni5ucghw8o" path="res://scripts/editor/button_bar.gd" id="4_button_bar"]
-[ext_resource type="PackedScene" uid="uid://u633aotie483" path="res://dialog/display_dialog.tscn" id="4_q0a35"]
-[ext_resource type="Script" uid="uid://bm6u423ifu2yg" path="res://scripts/editor/editor.gd" id="5_editor"]
-[ext_resource type="PackedScene" uid="uid://b4qxwukuicjci" path="res://dialog/task_dialog.tscn" id="6_task_dialog"]
-[ext_resource type="PackedScene" path="res://dialog/help_dialog.tscn" id="7_help_dialog"]
+[ext_resource type="StyleBox" uid="uid://bhn0kgpjel2s0" path="res://scripts/editor/button_bar.tres" id="1_x2an5"]
+[ext_resource type="Script" uid="uid://bm6u423ifu2yg" path="res://scripts/editor/editor.gd" id="2_kbagj"]
+[ext_resource type="Script" uid="uid://d2jni5ucghw8o" path="res://scripts/editor/button_bar.gd" id="3_oj4aq"]
+[ext_resource type="PackedScene" uid="uid://dsp75ltrhcvm7" path="res://scenes/node_canvas.tscn" id="4_froov"]
+[ext_resource type="PackedScene" uid="uid://u633aotie483" path="res://dialog/display_dialog.tscn" id="5_0mjp6"]
+[ext_resource type="PackedScene" uid="uid://b4qxwukuicjci" path="res://dialog/task_dialog.tscn" id="6_tt1ij"]
+[ext_resource type="PackedScene" uid="uid://dyxpvnj5tntcm" path="res://dialog/help_dialog.tscn" id="7_55i8o"]
+[ext_resource type="PackedScene" uid="uid://bq8formdialog01" path="res://dialog/form_dialog.tscn" id="8_form"]
 
 [node name="Control" type="PanelContainer" unique_id=728991178]
 anchors_preset = 15
@@ -14,8 +15,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = ExtResource("3_wrb8p")
-script = ExtResource("5_editor")
+theme_override_styles/panel = ExtResource("1_x2an5")
+script = ExtResource("2_kbagj")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1233018264]
 layout_mode = 2
@@ -37,8 +38,8 @@ size_flags_vertical = 0
 [node name="ButtonBar" type="PanelContainer" parent="VBoxContainer/HBoxContainer/VBoxContainer" unique_id=1351552218]
 layout_mode = 2
 size_flags_vertical = 0
-theme_override_styles/panel = ExtResource("3_wrb8p")
-script = ExtResource("4_button_bar")
+theme_override_styles/panel = ExtResource("1_x2an5")
+script = ExtResource("3_oj4aq")
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer/VBoxContainer/ButtonBar" unique_id=1587139510]
 layout_mode = 2
@@ -53,7 +54,7 @@ layout_mode = 2
 [node name="ButtonContainer" type="PanelContainer" parent="VBoxContainer/HBoxContainer" unique_id=46636664]
 layout_mode = 2
 size_flags_vertical = 0
-theme_override_styles/panel = ExtResource("3_wrb8p")
+theme_override_styles/panel = ExtResource("1_x2an5")
 
 [node name="GridContainer" type="GridContainer" parent="VBoxContainer/HBoxContainer/ButtonContainer" unique_id=198513212]
 layout_mode = 2
@@ -82,11 +83,8 @@ text = "Run"
 layout_mode = 2
 text = "Help"
 
-[node name="GraphEdit" type="GraphEdit" parent="VBoxContainer" unique_id=955933790]
+[node name="GraphEdit" parent="VBoxContainer" unique_id=923364536 instance=ExtResource("4_froov")]
 layout_mode = 2
-size_flags_vertical = 3
-scroll_offset = Vector2(0, -23)
-script = ExtResource("1_wlowb")
 
 [node name="StatusContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1398030426]
 custom_minimum_size = Vector2(0, 20)
@@ -103,13 +101,16 @@ layout_mode = 2
 text = "耗时 0 ms"
 horizontal_alignment = 2
 
-[node name="DisplayDialog" parent="." unique_id=406800570 instance=ExtResource("4_q0a35")]
+[node name="DisplayDialog" parent="." unique_id=406800570 instance=ExtResource("5_0mjp6")]
 visible = false
 
-[node name="TaskDialog" parent="." unique_id=446183364 instance=ExtResource("6_task_dialog")]
+[node name="TaskDialog" parent="." unique_id=446183364 instance=ExtResource("6_tt1ij")]
 visible = false
 
-[node name="HelpDialog" parent="." instance=ExtResource("7_help_dialog")]
+[node name="HelpDialog" parent="." unique_id=357791944 instance=ExtResource("7_55i8o")]
+visible = false
+
+[node name="FormDialog" parent="." instance=ExtResource("8_form")]
 visible = false
 
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Tasks" to="." method="_on_tasks_pressed"]

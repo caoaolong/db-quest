@@ -1,7 +1,8 @@
 [
     {
-        "level": 1,
+        "chapter": "新手引导",
         "name": "认识磁盘",
+        "editor": "program_editor",
         "load_previous": false,
         "difficulty": 1,
         "nodes": [
@@ -46,8 +47,9 @@
         ]
     },
     {
-        "level": 2,
+        "chapter": "新手引导",
         "name": "认识扇区",
+        "editor": "program_editor",
         "load_previous": true,
         "difficulty": 2,
         "nodes": [
@@ -84,8 +86,9 @@
         ]
     },
     {
-        "level": 3,
+        "chapter": "新手引导",
         "name": "数据库文件",
+        "editor": "program_editor",
         "load_previous": false,
         "difficulty": 1,
         "nodes": [
@@ -122,8 +125,9 @@
         ]
     },
     {
-        "level": 4,
+        "chapter": "新手引导",
         "name": "元数据页",
+        "editor": "program_editor",
         "load_previous": false,
         "difficulty": 1,
         "help": "res://docs/meta_layout.txt",
@@ -147,6 +151,30 @@
                 },
                 "trigger": "after(VF->write)",
                 "goal": "VF[0] is meta"
+            }
+        ]
+    },
+    {
+        "chapter": "存储引擎",
+        "name": "数据库组件",
+        "editor": "program_editor",
+        "load_previous": false,
+        "difficulty": 1,
+        "nodes": [
+            "Database",
+            "File",
+            "FunctionAdapter"
+        ],
+        "tasks": [
+            {
+                "title": "创建「Database」组件",
+                "description": "请正确初始化「Database」组件",
+                "reward": {
+                    "EXP": 10000,
+                    "COIN": 100
+                },
+                "trigger": "after(run)",
+                "goal": "Database.Check"
             }
         ]
     }

@@ -13,10 +13,12 @@ const PRESSED_BG_COLOR := Color(0.16, 0.16, 0.16, 1)
 @onready var _stars: HBoxContainer = $DifficultyStars
 @onready var _status: Label = $HBoxContainer/Status
 
+var _level_index: int = 0
 var _level_data: Dictionary = {}
 
 
-func setup(level_data: Dictionary) -> LevelCard:
+func setup(level_index: int, level_data: Dictionary) -> LevelCard:
+    _level_index = level_index
     _level_data = level_data.duplicate(true)
     if is_node_ready():
         _apply_level_data()
@@ -24,7 +26,7 @@ func setup(level_data: Dictionary) -> LevelCard:
 
 
 func get_level() -> int:
-    return int(_level_data.get("level", 0))
+    return _level_index
 
 
 func _ready() -> void:
@@ -68,11 +70,10 @@ func _set_mouse_filter_ignore(node: Node) -> void:
 
 
 func _apply_level_data() -> void:
-    var level := int(_level_data.get("level", 0))
-    _order.text = _format_level_order(level)
+    _order.text = _format_level_order(_level_index)
     _name.text = str(_level_data.get("name", ""))
     _apply_difficulty_stars(int(_level_data.get("difficulty", 1)))
-    _apply_clear_status(level)
+    _apply_clear_status(_level_index)
 
 
 func _apply_clear_status(level: int) -> void:
@@ -130,8 +131,10 @@ func _enter_level() -> void:
         return
 
     selected.emit(level)
-    GameState.set_current_level(level)
-    get_tree().change_scene_to_file("res://scenes/editor.tscn")
+    if not GameState.set_current_level(level):
+        push_error("无法进入关卡 %d：关卡配置无效" % level)
+        return
+    get_tree().change_scene_to_file(GameState.get_current_editor_scene())
 
 
 func _format_level_order(level: int) -> String:

@@ -11,7 +11,7 @@ extends BaseNode
 
 const MIN_INPUTS := 1
 const MAX_INPUTS := 16
-const FIRST_INPUT_SLOT := 1
+const FIRST_INPUT_SLOT := 2
 
 const INPUT_TYPE_OPTIONS := [
     "UINT8",
@@ -55,6 +55,7 @@ func apply_persisted_data(saved: Dictionary) -> void:
     var graph_node := get_parent() as GraphNode
     if graph_node and rows is Dictionary:
         _apply_input_row_data(graph_node, rows as Dictionary)
+    _restore_function_slots()
 
 
 func _sync_data_from_controls() -> void:
@@ -274,7 +275,7 @@ func _rebuild_input_slots() -> void:
     data["input_count"] = count
     _ensure_input_types()
 
-    while graph_node.get_child_count() > count + 1:
+    while graph_node.get_child_count() > count + FIRST_INPUT_SLOT:
         var slot_index := graph_node.get_child_count() - 1
         graph_edit.remove_slot_row(graph_node, slot_index)
 
@@ -295,6 +296,7 @@ func _rebuild_input_slots() -> void:
             )
         _configure_input_row(graph_node, slot_index, i)
 
+    _restore_function_slots()
     _fit_graph_node_size(graph_node)
 
 
