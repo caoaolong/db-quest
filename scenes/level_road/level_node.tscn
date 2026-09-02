@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://d3o2tcxman1vl"]
+
+[ext_resource type="Script" uid="uid://bdvty5eksng8e" path="res://scenes/level_node.gd" id="1_5xfni"]
+[ext_resource type="Texture2D" uid="uid://ci6io7d5mw7hj" path="res://assets/panel_grey_bolts/panel_grey_bolts_dark.png" id="1_semgd"]
+[ext_resource type="Texture2D" uid="uid://c5lujufql2if8" path="res://assets/panel_grey_bolts/panel_grey_bolts_blue.png" id="2_3448o"]
+[ext_resource type="Texture2D" uid="uid://beteh5vjnvb7o" path="res://assets/panel_grey_bolts/panel_grey_bolts_detail_a.png" id="2_qt1pn"]
+[ext_resource type="Texture2D" uid="uid://ctg3a72i5kd1i" path="res://assets/panel_grey_bolts/panel_grey_bolts_detail_b.png" id="3_3448o"]
+[ext_resource type="FontFile" uid="uid://dc1e8cjj16pfu" path="res://fonts/mm.ttf" id="6_by1n4"]
+
+[node name="LevelNode" type="Node2D" unique_id=21452144]
+script = ExtResource("1_5xfni")
+
+[node name="TextureButton" type="TextureButton" parent="." unique_id=1005482731]
+offset_right = 128.0
+offset_bottom = 128.0
+texture_normal = ExtResource("3_3448o")
+texture_pressed = ExtResource("2_3448o")
+texture_hover = ExtResource("2_qt1pn")
+texture_disabled = ExtResource("1_semgd")
+
+[node name="Label" type="RichTextLabel" parent="TextureButton" unique_id=1428127318]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_fonts/normal_font = ExtResource("6_by1n4")
+bbcode_enabled = true
+text = "关卡"
+horizontal_alignment = 1
+vertical_alignment = 1

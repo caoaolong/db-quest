@@ -27,8 +27,6 @@ func _ready() -> void:
     virtual_disk_path = VirtualDisk.ensure_exists()
     virtual_file_path = VirtualFile.ensure_exists()
     _load_node_list()
-    _validate_all_level_entries()
-    _load_level_config()
 
 
 func get_node_list() -> Array:
@@ -109,7 +107,7 @@ func should_spawn_system_node(template_name: String) -> bool:
             return true
 
 
-func set_current_level(level: int) -> bool:
+func set_current_level(level: int, level_name: String = "") -> bool:
     if level <= 0 or level > get_level_count():
         return false
 
@@ -118,6 +116,9 @@ func set_current_level(level: int) -> bool:
     if not _load_level_config():
         current_level = previous_level
         return false
+
+    if not level_name.is_empty():
+        current_level_name = level_name
     return true
 
 
@@ -219,17 +220,6 @@ func get_node_create_item(template_name: String) -> Dictionary:
         item = entry.duplicate(true)
 
     return item
-
-
-func get_level_entries() -> Array:
-    var entries: Array = []
-
-    for entry in _read_level_list():
-        if not entry is Dictionary:
-            continue
-        entries.append(entry.duplicate(true))
-
-    return entries
 
 
 func _build_system_node_item(entry: Dictionary) -> Dictionary:
@@ -409,7 +399,6 @@ func _load_level_config() -> bool:
         return false
 
     load_previous = bool(entry.get("load_previous", false))
-    current_level_name = str(entry.get("name", "")).strip_edges()
     current_help = str(entry.get("help", "")).strip_edges()
     current_editor = _resolve_editor_type(str(entry.get("editor", DEFAULT_EDITOR)))
 
@@ -429,19 +418,6 @@ func _load_level_config() -> bool:
     if tasks is Array:
         current_tasks = tasks
     return true
-
-
-func _validate_all_level_entries() -> void:
-    var level_list := _read_level_list()
-    for index in level_list.size():
-        var entry: Variant = level_list[index]
-        if not entry is Dictionary:
-            push_error("Level %d config invalid: entry must be an object" % (index + 1))
-            continue
-
-        var validation_error := _validate_level_entry(entry as Dictionary)
-        if not validation_error.is_empty():
-            push_error("Level %d config invalid: %s" % [index + 1, validation_error])
 
 
 func _validate_level_entry(_entry: Dictionary) -> String:

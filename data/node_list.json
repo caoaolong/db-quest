@@ -403,16 +403,6 @@
                             "type": "INPUT"
                         }
                     ]
-                },
-                {
-                    "row_number": 2.0,
-                    "row_name": "Flags",
-                    "op_list": [
-                        {
-                            "operation": "UINT32",
-                            "type": "INPUT"
-                        }
-                    ]
                 }
             ],
             "functions": [

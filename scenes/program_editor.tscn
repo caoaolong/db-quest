@@ -7,7 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://u633aotie483" path="res://dialog/display_dialog.tscn" id="5_0mjp6"]
 [ext_resource type="PackedScene" uid="uid://b4qxwukuicjci" path="res://dialog/task_dialog.tscn" id="6_tt1ij"]
 [ext_resource type="PackedScene" uid="uid://dyxpvnj5tntcm" path="res://dialog/help_dialog.tscn" id="7_55i8o"]
-[ext_resource type="PackedScene" uid="uid://bq8formdialog01" path="res://dialog/form_dialog.tscn" id="8_form"]
+[ext_resource type="PackedScene" uid="uid://bwwvc2pfk3djg" path="res://dialog/form_dialog.tscn" id="8_form"]
 
 [node name="Control" type="PanelContainer" unique_id=728991178]
 anchors_preset = 15
@@ -110,8 +110,7 @@ visible = false
 [node name="HelpDialog" parent="." unique_id=357791944 instance=ExtResource("7_55i8o")]
 visible = false
 
-[node name="FormDialog" parent="." instance=ExtResource("8_form")]
-visible = false
+[node name="FormDialog" parent="." unique_id=689983329 instance=ExtResource("8_form")]
 
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Tasks" to="." method="_on_tasks_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/ButtonContainer/GridContainer/Back" to="." method="_on_back_pressed"]

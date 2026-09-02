@@ -85,7 +85,7 @@ func _build_tab_bar() -> void:
 
 
 func _on_back_pressed() -> void:
-    get_tree().change_scene_to_file("res://scenes/level_list.tscn")
+    get_tree().change_scene_to_file("res://scenes/level_road.tscn")
 
 
 func _on_restart_pressed() -> void:
