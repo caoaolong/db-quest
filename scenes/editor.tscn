@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://b0kmtt1xqmp6c"]
+
+[ext_resource type="Script" uid="uid://dq5tu8a8uijni" path="res://scenes/editor.gd" id="1_b1cmn"]
+
+[node name="Editor" type="Control" unique_id=1271962926]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_b1cmn")
+
+[node name="GraphEdit" type="GraphEdit" parent="." unique_id=1499422139]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+scroll_offset = Vector2(-40, -40)

@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://c0exvp3lrheel"]
+
+[node name="ObjectNode" type="VBoxContainer" unique_id=1263940841]
+custom_minimum_size = Vector2(200, 0)
+
+[node name="ProgressBar" type="ProgressBar" parent="." unique_id=1624289405]
+custom_minimum_size = Vector2(0, 5)
+layout_mode = 2
+step = 1.0
+show_percentage = false

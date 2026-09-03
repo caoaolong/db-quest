@@ -1,0 +1,25 @@
+[gd_scene format=3 uid="uid://cjsfeliswhomo"]
+
+[ext_resource type="Script" uid="uid://bctxj3ams8ddg" path="res://dialog/backpack.gd" id="1_pfcia"]
+
+[node name="Backpack" type="PopupPanel" unique_id=1720234639]
+oversampling_override = 1.0
+initial_position = 1
+size = Vector2i(805, 600)
+visible = true
+borderless = false
+script = ExtResource("1_pfcia")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1430333252]
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 801.0
+offset_bottom = 596.0
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 4
+
+[node name="GridContainer" type="GridContainer" parent="MarginContainer" unique_id=1296110317]
+layout_mode = 2
+columns = 12

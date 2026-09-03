@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://d3o2tcxman1vl"]
 
-[ext_resource type="Script" uid="uid://bdvty5eksng8e" path="res://scenes/level_node.gd" id="1_5xfni"]
+[ext_resource type="Script" uid="uid://bdvty5eksng8e" path="res://scenes/level_road/level_node.gd" id="1_5xfni"]
 [ext_resource type="Texture2D" uid="uid://ci6io7d5mw7hj" path="res://assets/panel_grey_bolts/panel_grey_bolts_dark.png" id="1_semgd"]
 [ext_resource type="Texture2D" uid="uid://c5lujufql2if8" path="res://assets/panel_grey_bolts/panel_grey_bolts_blue.png" id="2_3448o"]
 [ext_resource type="Texture2D" uid="uid://beteh5vjnvb7o" path="res://assets/panel_grey_bolts/panel_grey_bolts_detail_a.png" id="2_qt1pn"]

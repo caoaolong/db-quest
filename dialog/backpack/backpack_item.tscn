@@ -1,0 +1,26 @@
+[gd_scene format=3 uid="uid://dxh7jffkmu6na"]
+
+[ext_resource type="Texture2D" uid="uid://dlkewgxyvrgla" path="res://assets/icons/box.svg" id="1_hr24c"]
+
+[node name="BackpackItem" type="Button" unique_id=1631809395]
+custom_minimum_size = Vector2(60, 60)
+offset_right = 60.0
+offset_bottom = 67.0
+
+[node name="Icon" type="TextureRect" parent="." unique_id=1178087480]
+custom_minimum_size = Vector2(20, 40)
+layout_mode = 0
+offset_right = 60.0
+offset_bottom = 40.0
+texture = ExtResource("1_hr24c")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="." unique_id=881980952]
+layout_mode = 0
+offset_top = 44.0
+offset_right = 60.0
+offset_bottom = 67.0
+theme_override_font_sizes/font_size = 12
+text = "Label"
+horizontal_alignment = 1
