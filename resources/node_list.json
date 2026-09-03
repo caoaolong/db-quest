@@ -1,6 +1,18 @@
 [
     {
-        "name": "CSDB"
+        "name": "CSDB",
+        "slots": [
+            {
+                "name": "file",
+                "type": "File",
+                "slot_type": "input"
+            },
+            {
+                "name": "pager",
+                "type": "Pager",
+                "slot_type": "input"
+            }
+        ]
     },
     {
         "name": "File"

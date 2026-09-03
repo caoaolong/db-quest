@@ -3,6 +3,8 @@ extends PopupPanel
 const NODE_LIST_PATH := "res://resources/node_list.json"
 const BACKPACK_ITEM_SCENE := preload("res://dialog/backpack/backpack_item.tscn")
 
+signal item_selected(entry: Dictionary)
+
 var _grid: GridContainer
 
 
@@ -28,6 +30,12 @@ func _populate() -> void:
         var _title := item.get_node_or_null("Title") as Label
         if _title:
             _title.text = str(entry.get("name", ""))
+        item.pressed.connect(_on_item_pressed.bind(entry))
+
+
+func _on_item_pressed(entry: Dictionary) -> void:
+    item_selected.emit(entry)
+    hide()
 
 
 func _load_node_list() -> Array:
